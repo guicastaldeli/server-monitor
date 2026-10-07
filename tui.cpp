@@ -232,7 +232,7 @@ static void renderAll(
 
     out << hexToAnsiFg("#dfb3f4") << Repeat("=", 60) << ANSI_RESET << "\n";
     out << "\n";
-    out << Repeat(" ", 27) << hexToAnsiFg("#c36eed") << "Server Monitor" << ANSI_RESET << "\n";
+    out << Repeat(" ", 24) << hexToAnsiFg("#c36eed") << "Server Monitor" << ANSI_RESET << "\n";
     out << "\n";
     out << hexToAnsiFg("#dfb3f4") << Repeat("=", 60) << ANSI_RESET << "\n";
 
