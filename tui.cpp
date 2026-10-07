@@ -265,6 +265,8 @@ static void renderAll(
             }
         }
 
+        out << "     " << Repeat("-", 20) << "z\n";
+        
         bool hasEndpoints = false;
         for(const  auto& r : pv.rows) if(r.isEndpoint) { hasEndpoints = true; break; }
         if(hasEndpoints) {
@@ -273,7 +275,7 @@ static void renderAll(
             // header row
             for(const auto& r : pv.rows) {
                 if(!r.isEndpoint) continue;
-                out << "     ";
+                out << "  ";
                 for(size_t c = 0; c < r.fields.size(); ++c) {
                     out << padRight(r.fields[c].label, cw.widths[c]);
                     if(c + 1 < r.fields.size()) out << "  |  ";
@@ -289,19 +291,27 @@ static void renderAll(
                 bool rowSelected = (cur.mode == Mode::InsideProject) &&
                                     ((int)pi == cur.projectIdx) &&
                                     ((int)r == cur.row);
-                out << (rowSelected ? "   > " : "     ");
+                out << "     ";
                 for(size_t c = 0; c < row.fields.size(); ++c) {
                     bool cellSel = rowSelected && ((int)c == cur.col);
-                    std::string cell = row.fields[c].value;
-                    
-                    out << (cellSel ? CURSOR_CHAR : "  ");
-                    out << padRight(cell, cw.widths[c]);
+                    bool hovered = cellSel && row.fields[c].isUrl;
+                    std::string cellStyle;
 
+                    if(hovered) {
+                        if(row.status == Status::Online) cellStyle = styleCode("blink");
+                        if(row.status == Status::Offline) cellStyle = styleCode("dim");
+                    }
+
+                    std::string cell = row.fields[c].value;
+                    out << (cellSel ? CURSOR_CHAR : "  ");
+                    out << cellStyle;
+                    out << padRight(cell, cw.widths[c]);
+                    if(!cellStyle.empty()) out << ANSI_RESET;
                     if(c + 1 < row.fields.size()) out << "  |  ";
                 }
 
                 const auto& info = infoOf(row.status);
-                std::string colorStart = hexToAnsiFg(info.color);
+                std::string colorStart = styleCodes(info.styles) + hexToAnsiFg(info.color);
                 out << "  |  " << colorStart 
                     << padRight(info.label, cw.statusWidth)
                     << ANSI_RESET << "\n";

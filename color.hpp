@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace smon {
 
@@ -70,6 +71,30 @@ inline std::string toAnsiBg(const RGB& c) {
 inline std::string hexToAnsiFg(const std::string& hex) {
     std::string val = toAnsiFg(parseHex(hex));
     return val;
+}
+
+/**
+ * 
+ * Style Code
+ * 
+ */
+inline std::string styleCode(const std::string& name) {
+    if(name == "bold")              return "\x1b[1m";
+    if(name == "dim")               return "\x1b[2m";
+    if(name == "italic")            return "\x1b[3m";
+    if(name == "underline")         return "\x1b[4m";
+    if(name == "blink")             return "\x1b[5m";
+    if(name == "blink-fast")        return "\x1b[6m";
+    if(name == "reverse")           return "\x1b[7m";
+    if(name == "hidden")            return "\x1b[8m";
+    if(name == "strikethrough")     return "\x1b[9m";
+    return "";
+}
+
+inline std::string styleCodes(const std::vector<std::string>& names) {
+    std::string out;
+    for(const auto& n : names) out += styleCode(n);
+    return out;
 }
 
 }

@@ -11,6 +11,7 @@ struct FieldInfo {
     std::string label;
     std::string value;
     FieldAction action;
+    bool isUrl = false;
 };
 
 }

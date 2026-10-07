@@ -17,9 +17,9 @@ struct Endpoint {
     int checkPort;                      // Port used for TCP connect (0 = not set)
     std::string rawUrl;                 // "host:port" string, for the RAW column
     std::vector<FieldInfo> fields() const { return {
-        { "IP", checkHost, [](const std::string& v){ openInBrowser(BROWSER_URL + v); } },
-        { "URL", displayUrl, [](const std::string& v){ openInBrowser(v); } },
-        { "RAW", rawUrl, FieldAction{} }
+        { "IP", checkHost, [](const std::string& v){ openInBrowser(BROWSER_URL + v); }, false },
+        { "URL", displayUrl, [](const std::string& v){ openInBrowser(v); }, true },
+        { "RAW", rawUrl, FieldAction{}, true }
     }; }
 };
 
