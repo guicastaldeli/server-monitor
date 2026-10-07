@@ -1,0 +1,10 @@
+.gitignore
+.vscode
+.build/*
+!.build/build
+!.build/build.bat
+!.build/build.sh
+!.build/build_data.bat
+.out
+data/.out
+/data/.out
