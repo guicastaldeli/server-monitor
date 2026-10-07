@@ -72,6 +72,7 @@ Key readKey();
  * 
  */
 void clearScreen();
+void clear();
 void hideCursor();
 void showCursor();
 void moveCursor(int row, int col);

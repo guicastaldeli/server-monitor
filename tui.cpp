@@ -206,6 +206,10 @@ void clearScreen() {
     std::cout << "\x1b[2J\x1b[H" << std::flush;
 }
 
+void clear() {
+    std::cout << "\x1b[?1049h" << std::flush;
+}
+
 void hideCursor() {
     std::cout << "\x1b[?25l" << std::flush;
 }
@@ -359,7 +363,7 @@ void render(
     terminalInit();
     hideCursor();
 
-    std::cout << "\x1b[?1049h" << std::flush;
+    clear();
 
     bool running = true;
     while(running) {
@@ -453,7 +457,7 @@ void render(
         }
     }
 
-    std::cout << "\x1b[?1049h" << std::flush;
+    clear();
     showCursor();
     terminalRestore();
     clearScreen();
