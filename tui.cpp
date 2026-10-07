@@ -230,11 +230,11 @@ static void renderAll(
 ) {
     std::ostringstream out;
 
-    out << hexToAnsiFg("#c145ff") << Repeat("=", 80) << ANSI_RESET << "\n";
+    out << hexToAnsiFg("#dfb3f4") << Repeat("=", 60) << ANSI_RESET << "\n";
     out << "\n";
-    out << Repeat(" ", 34) << hexToAnsiFg("#9712da") << "Server Monitor" << ANSI_RESET << "\n";
+    out << Repeat(" ", 34) << hexToAnsiFg("#c36eed") << "Server Monitor" << ANSI_RESET << "\n";
     out << "\n";
-    out << hexToAnsiFg("#c145ff") << Repeat("=", 80) << ANSI_RESET << "\n";
+    out << hexToAnsiFg("#dfb3f4") << Repeat("=", 60) << ANSI_RESET << "\n";
 
     out << "\n";
     out << hexToAnsiFg("#165cd6") << "[Arrows] Navigate   [Enter] Enter/Open   [Esc] Back/Quit   [R] Refresh   [Q] Quit" << ANSI_RESET << "\n";
