@@ -266,7 +266,7 @@ static void renderAll(
             }
         }
 
-        out << "     " << Repeat("-", 30) << "\n";
+        out << "       " << Repeat("-", 30) << "\n";
         
         bool hasEndpoints = false;
         for(const  auto& r : pv.rows) if(r.isEndpoint) { hasEndpoints = true; break; }
@@ -358,6 +358,8 @@ void render(
 
     terminalInit();
     hideCursor();
+
+    std::cout << "\x1b[?1049h" << std::flush;
 
     bool running = true;
     while(running) {
@@ -451,6 +453,7 @@ void render(
         }
     }
 
+    std::cout << "\x1b[?1049h" << std::flush;
     showCursor();
     terminalRestore();
     clearScreen();
