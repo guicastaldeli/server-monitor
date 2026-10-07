@@ -13,6 +13,56 @@ char ConvKey(char c) {
     return val;
 }
 
+static std::string padRight(const std::string& s, size_t w) {
+    if(s.size() >= w) return s;
+    return s + std::string(w - s.size(), ' ');
+}
+
+static ColWidths computeWidths(const ProjectView& pv) {
+    ColWidths cw;
+    size_t ncols = 0;
+    for(const auto& r : pv.rows) {
+        if(r.isEndpoint) { ncols = r.fields.size(); break; }
+    }
+    cw.widths.assign(ncols, 0);
+
+    for(const auto& r : pv.rows) {
+        if(!r.isEndpoint) continue;
+        for(size_t i = 0; i < r.fields.size() && i < ncols; ++i) {
+            cw.widths[i] = std::max(cw.widths[i], r.fields[i].label.size());
+            cw.widths[i] = std::max(cw.widths[i], r.fields[i].value.size());
+        }
+        if(r.status.size() > cw.statusWidth) cw.statusWidth = r.status.size();
+    }
+
+    return cw;
+}
+
+static void refreshRowStatuses(
+    std::vector<ProjectView>& views,
+    const std::vector<Project>& projects,
+    const StatusMonitor& monitor
+) { 
+    for(size_t pi = 0; pi < views.size(); ++pi) {
+        if(pi >= projects.size()) break;
+        const auto& proj = projects[pi];
+        auto& pv = views[pi];
+
+        size_t ei = 0;
+        for(auto& row : pv.rows) {
+            if(!row.isEndpoint) continue;
+            if(ei >= proj.endpoints.size()) break;
+            const auto& ep = proj.endpoints[ei];
+            row.status = monitor.statusOf(ep.service, ep.rawUrl);
+            ++ei;
+        }
+    }
+}   
+
+static void dispatchAction(const FieldInfo& f) {
+    if(f.action) f.action(f.value);
+}
+
 /**
  * 
  * Terminal
@@ -141,6 +191,24 @@ void showCursor() {
 
 void moveCursor(int row, int col) {
     std::cout << "\x1b[" << row << ";" << col << "H" << std::flush;
+}
+
+static void renderAll(
+    const std::string& rootFolder,
+    const std::vector<ProjectView>& views,
+    const CursorState& cur,
+    const StatusMonitor& monitor
+) {
+
+}
+
+void render(
+    const std::string& rootFolder,
+    const std::vector<Project>& projects,
+    const std::vector<ProjectView>& views,
+    StatusMonitor& monitor
+) {
+    
 }
 
 /**
