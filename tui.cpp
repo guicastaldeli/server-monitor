@@ -199,16 +199,194 @@ static void renderAll(
     const CursorState& cur,
     const StatusMonitor& monitor
 ) {
+    std::ostringstream out;
 
+    out << "================\n";
+    out << "\n";
+    out << "Server Monitor\n";
+    out << "\n";
+    out << "================\n\n";
+    out << "-- Folder: " << rootFolder << "\n\n";
+    out << "PROJECTS:\n\n";
+
+    for(size_t pi = 0; pi < views.size(); ++pi) {
+        const auto& pv = views[pi];
+        
+        // Outside project-level
+        if(cur.mode == Mode::SelectProject && (int)pi == cur.projectIdx) {
+            out << "> " << pv.name << "\n";
+        } else if(cur.mode == Mode::InsideProject && (int)pi == cur.projectIdx) {
+            out << "** " << pv.name << "\n";
+        } else {
+            out << "   " << pv.name << "\n";
+        }
+
+        // Project-level fields
+        for(size_t r = 0; r < pv.rows.size(); ++r) {
+            const auto& row = pv.rows[r];
+            if(row.isEndpoint) break;
+            for(size_t c = 0; c < row.fields.size(); ++c) {
+                bool sel = (cur.mode == Mode::InsideProject) &&
+                            ((int)pi == cur.projectIdx) &&
+                            ((int)r == cur.row) &&
+                            ((int)c == cur.col);
+                out << (sel ? "   > " : "     ")
+                    << row.fields[c].label << ": "
+                    << row.fields[c].value << "\n";
+            }
+        }
+
+        bool hasEndpoints = false;
+        for(const  auto& r : pv.rows) if(r.isEndpoint) { hasEndpoints = true; break; }
+        if(hasEndpoints) {
+            ColWidths cw = computeWidths(pv);
+
+            // header row
+            for(const auto& r : pv.rows) {
+                if(!r.isEndpoint) continue;
+                out << "     ";
+                for(size_t c = 0; c < r.fields.size(); ++c) {
+                    out << padRight(r.fields[c].label, cw.widths[c]);
+                    if(c + 1 < r.fields.size()) out << "  |  ";
+                }
+                out << "  |  " << padRight("STATUS", cw.statusWidth) << "\n";
+
+                break;
+            }
+            for(size_t r = 0; r < pv.rows.size(); ++r) {
+                const auto& row = pv.rows[r];
+                if(!row.isEndpoint) continue;
+
+                bool rowSelected = (cur.mode == Mode::InsideProject) &&
+                                    ((int)pi == cur.projectIdx) &&
+                                    ((int)r == cur.row);
+                out << (rowSelected ? "   > " : "     ");
+                for(size_t c = 0; c < row.fields.size(); ++c) {
+                    bool cellSel = rowSelected && ((int)c == cur.col);
+                    std::string cell = row.fields[c].value;
+                    if(cellSel) cell = "[" + cell + "]";
+                    if(c + 1 < row.fields.size()) out << "  |  ";
+                }
+
+                std::string st = row.status.empty() ? "unknown" : row.status;
+                out << "  |  " << padRight(st, cw.statusWidth) << "\n";
+            }
+        }
+
+        out << "\n";
+    }
+
+    out << "[Arrows] Navigate   [Enter] Enter/Open   [Esc] Back/Quit   [R] Refresh   [Q] Quit\n";
+
+    clearScreen();
+    std::cout << out.str() << std::flush;
 }
 
 void render(
     const std::string& rootFolder,
     const std::vector<Project>& projects,
-    const std::vector<ProjectView>& views,
+    const std::vector<ProjectView>& viewsIn,
     StatusMonitor& monitor
 ) {
-    
+    std::vector<ProjectView> views = viewsIn;
+    CursorState cur;
+
+    terminalInit();
+    hideCursor();
+
+    bool running = true;
+    while(running) {
+        refreshRowStatuses(views, projects, monitor);
+        renderAll(rootFolder, views, cur, monitor);
+
+        Key k = readKey();
+        switch(k) {
+            // Quit
+            case Key::Quit:
+                running = false;
+                break;
+            // Refresh
+            case Key::Refresh:
+                monitor.requestRefresh();
+                break;
+            // Up
+            case Key::Up: {
+                if(cur.mode == Mode::SelectProject) {
+                    if(cur.projectIdx > 0) --cur.projectIdx;
+                } else {
+                    if(cur.row > 0) {
+                        --cur.row;
+                        const auto& pv = views[cur.projectIdx];
+                        int maxc = (int)pv.rows[cur.row].fields.size() - 1;
+                        if(maxc < 0) maxc = 0;
+                        if(cur.col > maxc) cur.col = maxc;
+                    }
+                }
+            } break;
+            // Down
+            case Key::Down: {
+                if(cur.mode == Mode::SelectProject) {
+                    if(cur.projectIdx + 1 < (int)views.size()) ++cur.projectIdx;
+                } else {
+                    const auto& pv = views[cur.projectIdx];
+                    if(cur.row + 1 < (int)pv.rows.size()) {
+                        ++cur.row;
+                        int maxc = (int)pv.rows[cur.row].fields.size() - 1;
+                        if(maxc < 0) maxc = 0;
+                        if(cur.col > maxc) cur.col = maxc;
+                    }
+                }
+            } break;
+            // Left
+            case Key::Left: {
+                if(cur.mode == Mode::InsideProject) {
+                    if(cur.col > 0) --cur.col;
+                }
+            } break;
+            // Right
+            case Key::Right: {
+                if(cur.mode == Mode::InsideProject) {
+                    const auto& pv = views[cur.projectIdx];
+                    int maxc = (int)pv.rows[cur.row].fields.size() - 1;
+                    if(maxc < 0) maxc = 0;
+                    if(cur.col < maxc) ++cur.col;
+                }
+            } break;
+            // Enter
+            case Key::Enter: {
+                if(cur.mode == Mode::SelectProject) {
+                    if(!views.empty()) {
+                        cur.mode = Mode::InsideProject;
+                        cur.row = 0;
+                        cur.col = 0;
+                    }
+                } else {
+                    const auto& pv = views[cur.projectIdx];
+                    if(cur.row >= 0 && cur.row < (int)pv.rows.size()) {
+                        const auto& row = pv.rows[cur.row];
+                        if(cur.col >= 0 && cur.col < (int)row.fields.size()) {
+                            dispatchAction(row.fields[cur.col]);
+                        }
+                    }
+                }
+            } break;
+            // ESC
+            case Key::Escape: {
+                if(cur.mode == Mode::InsideProject) {
+                    cur.mode = Mode::SelectProject;
+                } else {
+                    running = false;
+                }
+            } break;
+
+            default:
+                break;
+        }
+    }
+
+    showCursor();
+    terminalRestore();
+    clearScreen();
 }
 
 /**

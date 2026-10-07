@@ -72,7 +72,7 @@ void showCursor();
 void moveCursor(int row, int col);
 void render(const std::string& rootFolder,
             const std::vector<Project>& projects,
-            const std::vector<ProjectView>& views,
+            const std::vector<ProjectView>& viewsIn,
             StatusMonitor& monitor);
 static void renderAll(const std::string& rootFolder,
                         const std::vector<ProjectView>& views,
