@@ -33,7 +33,7 @@ namespace smon {
             #ifdef _WIN32
                 ai->ai_addr, (int)ai->ai_addrlen
             #else
-                ai->ai_addr, ai->addrlen
+                ai->ai_addr, ai->ai_addrlen
             #endif
             );
             if(rc == 0) {
@@ -59,7 +59,7 @@ namespace smon {
                     int len = sizeof(err);
                     getsockopt(s, SOL_SOCKET, SO_ERROR, (char*)&err, &len);
             #else
-                    socketlen_t len = sizeof(err);
+                    socklen_t len = sizeof(err);
                     getsockopt(s, SOL_SOCKET, SO_ERROR, &err, &len);
             #endif
                     

@@ -32,7 +32,7 @@ std::vector<Project> scanProjects(const std::string& root) {
         if(!entry.is_regular_file(err) || err) { err.clear(); continue; }
         
         std::string fname = entry.path().filename().string();
-        if(isComposeFile(fname)) continue;
+        if(!isComposeFile(fname)) continue;
 
         Project p;
         p.path = entry.path().parent_path().string();

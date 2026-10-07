@@ -1,5 +1,14 @@
+/******************
+ * 
+ * 
+ * Cross platform socket initialization + connect helpers
+ * 
+ * 
+ *************/
 #pragma once
-// Cross platform socket initialization + connect helpers
+
+#include <string>
+#include <vector>
 
 #ifdef _WIN32
     #ifndef WIN32_LEAN_AND_MEAN
@@ -24,10 +33,22 @@
 
 namespace smon {
 
-// Sockets
+/**
+ * 
+ * Sockets
+ * 
+ */
 bool socketInit();
 void socketCleanup();
 void closeSocket(socket_t s);
 bool setNonblocking(socket_t s, bool nonblocking);
+
+/**
+ * 
+ * External openers
+ * 
+ */
+bool openInBrowser(const std::string& url);
+bool openInFileManager(const std::string& path);
 
 }

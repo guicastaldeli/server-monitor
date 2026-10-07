@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-set ROOT_DIR=C:\Users\casta\OneDrive\Desktop\vscode\currency-monitor
+set ROOT_DIR=%~dp0
 set BUILD_DIR=%ROOT_DIR%\.build
 
 cd /d "%BUILD_DIR%" || (
@@ -10,14 +10,15 @@ cd /d "%BUILD_DIR%" || (
     exit /b 1
 )
 
-if not exist hello.exe (
-    echo ERROR: hello.exe not found. Run build.bat first.
+if not exist server_monitor.exe (
+    echo ERROR: server_monitor.exe not found. Run build.bat first.
     pause
     exit /b 1
 )
 
 echo Running...
-hello.exe
+server_monitor.exe %*
 echo.
 echo Exited with code %errorlevel%.
 pause
+endlocal

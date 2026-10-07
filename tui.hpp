@@ -79,13 +79,4 @@ static void renderAll(const std::string& rootFolder,
                         const CursorState& cur,
                         const StatusMonitor& monitor);
 
-
-/**
- * 
- * External openers
- * 
- */
-bool openInBrowser(const std::string& url);
-bool openInFileManager(const std::string& path);
-
 }
