@@ -230,17 +230,17 @@ static void renderAll(
 ) {
     std::ostringstream out;
 
-    out << Repeat("=", 50) << hexToAnsiFg("#9712da") << "\n";
+    out << hexToAnsiFg("#c145ff") << Repeat("=", 50) << ANSI_RESET << "\n";
     out << "\n";
-    out << Repeat(" ", 17) << hexToAnsiFg("#4c096d") << "Server Monitor\n";
+    out << Repeat(" ", 17) << hexToAnsiFg("#9712da") << "Server Monitor" << ANSI_RESET << "\n";
     out << "\n";
-    out << Repeat("=", 50) << hexToAnsiFg("#9712da") << "\n";
+    out << hexToAnsiFg("#c145ff") << Repeat("=", 50) << ANSI_RESET << "\n";
 
     out << "\n";
-    out << hexToAnsiFg("#165cd6") << "[Arrows] Navigate   [Enter] Enter/Open   [Esc] Back/Quit   [R] Refresh   [Q] Quit\n";
+    out << hexToAnsiFg("#165cd6") << "[Arrows] Navigate   [Enter] Enter/Open   [Esc] Back/Quit   [R] Refresh   [Q] Quit" << ANSI_RESET << "\n";
     out << "\n";
 
-    out << hexToAnsiFg("#d6cc16") << "--- Folder: " << rootFolder << "\n\n";
+    out << hexToAnsiFg("#d6cc16") << "--- Folder: " << rootFolder << ANSI_RESET << "\n\n";
     out << "PROJECTS:\n\n";
 
     for(size_t pi = 0; pi < views.size(); ++pi) {
@@ -256,11 +256,11 @@ static void renderAll(
         }
 
         if(cur.mode == Mode::SelectProject && (int)pi == cur.projectIdx) {
-            out << CURSOR_CHAR << nameColor << pv.name << "\n";
+            out << CURSOR_CHAR << nameColor << pv.name << ANSI_RESET << "\n";
         } else if(cur.mode == Mode::InsideProject && (int)pi == cur.projectIdx) {
-            out << "** " << nameColor << pv.name << "\n";
+            out << "** " << nameColor << pv.name << ANSI_RESET << "\n";
         } else {
-            out << "   " << nameColor << pv.name << "\n";
+            out << "   " << nameColor << pv.name << ANSI_RESET << "\n";
         }
 
         // Project-level fields
