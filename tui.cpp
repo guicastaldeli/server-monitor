@@ -8,6 +8,7 @@
 #include <string>
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 
 namespace smon {
 
@@ -298,8 +299,13 @@ static void renderAll(
                     std::string cellStyle;
 
                     if(hovered) {
+                    #ifdef _WIN32
                         if(row.status == Status::Online) cellStyle = styleCode("blink");
                         if(row.status == Status::Offline) cellStyle = styleCode("dim");
+                    #else
+                        if(row.status == Status::Online) if(blinkOn()) cellStyle = styleCode("dim");
+                        if(row.status == Status::Offline) cellStyle = styleCode("dim");
+                    #endif
                     }
 
                     std::string cell = row.fields[c].value;
@@ -312,7 +318,9 @@ static void renderAll(
 
                 const auto& info = infoOf(row.status);
                 std::string colorStart = styleCodes(info.styles) + hexToAnsiFg(info.color);
-                out << "  |  " << colorStart 
+                std::string statusStyle;
+                if(blinkOn()) statusStyle = styleCode("dim");
+                out << "  |  " << statusStyle << colorStart 
                     << padRight(info.label, cw.statusWidth)
                     << ANSI_RESET << "\n";
             }

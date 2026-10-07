@@ -11,6 +11,9 @@ struct RGB {
     int b = 0;
 };
 
+#define HALF_PERIOD_MS 500
+
+static std::chrono::steady_clock::time_point g_blinkEpoch = std::chrono::steady_clock::now();
 inline const char* ANSI_RESET = "\x1b[0m";
 
 /**
@@ -96,5 +99,12 @@ inline std::string styleCodes(const std::vector<std::string>& names) {
     for(const auto& n : names) out += styleCode(n);
     return out;
 }
+
+static bool blinkOn(int halfPeriodMs = HALF_PERIOD_MS) {
+    using namespace std::chrono;
+    auto elapsed = duration_cast<milliseconds>(steady_clock::now() - g_blinkEpoch).count();
+    return (elapsed / halfPeriodMs % 2 == 0);    
+}
+
 
 }
