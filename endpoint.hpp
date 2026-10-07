@@ -17,9 +17,9 @@ struct Endpoint {
     int checkPort;                      // Port used for TCP connect (0 = not set)
     std::string rawUrl;                 // "host:port" string, for the RAW column
     std::vector<FieldInfo> fields() const { return {
-        { "ip", checkHost, [](const std::string& v){ openInBrowser(BROWSER_URL + v); } },
-        { "url", displayUrl, [](const std::string& v){ openInBrowser(v); } },
-        { "raw", rawUrl, FieldAction{} }
+        { "IP", checkHost, [](const std::string& v){ openInBrowser(BROWSER_URL + v); } },
+        { "URL", displayUrl, [](const std::string& v){ openInBrowser(v); } },
+        { "RAW", rawUrl, FieldAction{} }
     }; }
 };
 
@@ -30,8 +30,8 @@ struct Project {
     std::string composePath;                // path to docker-compose.yml.
     std::vector<Endpoint> endpoints;
     std::vector<FieldInfo> fields() const { return {
-        { "path", path, [](const std::string&v){ openInBrowser(v); } },
-        { "compose", composePath, [](const std::string& v ){ openInFileManager(v); } }
+        { "Path", path, [](const std::string&v){ openInBrowser(v); } },
+        { "Compose", composePath, [](const std::string& v ){ openInFileManager(v); } }
     }; }
 };
 

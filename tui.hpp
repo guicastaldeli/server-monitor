@@ -19,6 +19,8 @@
     #include <sys/select.h>
 #endif
 
+#define CURSOR_CHAR "> "
+
 namespace smon {
 
 enum class Mode {

@@ -243,7 +243,7 @@ static void renderAll(
         
         // Outside project-level
         if(cur.mode == Mode::SelectProject && (int)pi == cur.projectIdx) {
-            out << "> " << pv.name << "\n";
+            out << CURSOR_CHAR << pv.name << "\n";
         } else if(cur.mode == Mode::InsideProject && (int)pi == cur.projectIdx) {
             out << "** " << pv.name << "\n";
         } else {
@@ -293,8 +293,10 @@ static void renderAll(
                 for(size_t c = 0; c < row.fields.size(); ++c) {
                     bool cellSel = rowSelected && ((int)c == cur.col);
                     std::string cell = row.fields[c].value;
-                    if(cellSel) cell = "[" + cell + "]";
-                    out << padRight(cell, cw.widths[c] + (cellSel ? 2 : 0));
+                    
+                    out << (cellSel ? CURSOR_CHAR : "  ");
+                    out << padRight(cell, cw.widths[c]);
+
                     if(c + 1 < row.fields.size()) out << "  |  ";
                 }
 
