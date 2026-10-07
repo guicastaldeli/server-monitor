@@ -230,29 +230,37 @@ static void renderAll(
 ) {
     std::ostringstream out;
 
-    out << Repeat("=", 50) << "\n";
+    out << Repeat("=", 50) << hexToAnsiFg("#9712da") << "\n";
     out << "\n";
-    out << Repeat(" ", 17) << "Server Monitor\n";
+    out << Repeat(" ", 17) << hexToAnsiFg("#4c096d") << "Server Monitor\n";
     out << "\n";
-    out << Repeat("=", 50) << "\n";
+    out << Repeat("=", 50) << hexToAnsiFg("#9712da") << "\n";
 
     out << "\n";
-    out << "[Arrows] Navigate   [Enter] Enter/Open   [Esc] Back/Quit   [R] Refresh   [Q] Quit\n";
+    out << hexToAnsiFg("#165cd6") << "[Arrows] Navigate   [Enter] Enter/Open   [Esc] Back/Quit   [R] Refresh   [Q] Quit\n";
     out << "\n";
 
-    out << "--- Folder: " << rootFolder << "\n\n";
+    out << hexToAnsiFg("#d6cc16") << "--- Folder: " << rootFolder << "\n\n";
     out << "PROJECTS:\n\n";
 
     for(size_t pi = 0; pi < views.size(); ++pi) {
         const auto& pv = views[pi];
         
         // Outside project-level
-        if(cur.mode == Mode::SelectProject && (int)pi == cur.projectIdx) {
-            out << CURSOR_CHAR << pv.name << "\n";
-        } else if(cur.mode == Mode::InsideProject && (int)pi == cur.projectIdx) {
-            out << "** " << pv.name << "\n";
+        std::string nameColor;
+        if((cur.mode == Mode::SelectProject && (int)pi == cur.projectIdx) ||
+            (cur.mode == Mode::InsideProject && (int)pi == cur.projectIdx)) {
+            nameColor = styleCode("bold") + hexToAnsiFg("#00ff00");
         } else {
-            out << "   " << pv.name << "\n";
+            nameColor = hexToAnsiFg("#009e00"); 
+        }
+
+        if(cur.mode == Mode::SelectProject && (int)pi == cur.projectIdx) {
+            out << CURSOR_CHAR << nameColor << pv.name << "\n";
+        } else if(cur.mode == Mode::InsideProject && (int)pi == cur.projectIdx) {
+            out << "** " << nameColor << pv.name << "\n";
+        } else {
+            out << "   " << nameColor << pv.name << "\n";
         }
 
         // Project-level fields
@@ -270,7 +278,7 @@ static void renderAll(
             }
         }
 
-        out << "       " << Repeat("-", 30) << "\n";
+        out << "       " << Repeat("-", 60) << "\n";
         
         bool hasEndpoints = false;
         for(const  auto& r : pv.rows) if(r.isEndpoint) { hasEndpoints = true; break; }
