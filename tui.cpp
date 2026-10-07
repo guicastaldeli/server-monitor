@@ -266,7 +266,7 @@ static void renderAll(
             }
         }
 
-        out << "     " << Repeat("-", 20) << "z\n";
+        out << "     " << Repeat("-", 30) << "\n";
         
         bool hasEndpoints = false;
         for(const  auto& r : pv.rows) if(r.isEndpoint) { hasEndpoints = true; break; }
@@ -323,8 +323,14 @@ static void renderAll(
                     if(s == "blink") { wblink = true; continue; }
                     stylePrefix += styleCode(s);
                 }
+
+                RGB baseRgb = parseHex(info.color);
                 if(wblink && blinkOn()) {
+                #ifdef _WIN32
                     stylePrefix += styleCode("dim");
+                #else
+                    darkenColor(baseRgb);
+                #endif
                 }
 
                 std::string colorStart = hexToAnsiFg(info.color);
