@@ -230,11 +230,11 @@ static void renderAll(
 ) {
     std::ostringstream out;
 
-    out << hexToAnsiFg("#c145ff") << Repeat("=", 50) << ANSI_RESET << "\n";
+    out << hexToAnsiFg("#c145ff") << Repeat("=", 80) << ANSI_RESET << "\n";
     out << "\n";
-    out << Repeat(" ", 17) << hexToAnsiFg("#9712da") << "Server Monitor" << ANSI_RESET << "\n";
+    out << Repeat(" ", 34) << hexToAnsiFg("#9712da") << "Server Monitor" << ANSI_RESET << "\n";
     out << "\n";
-    out << hexToAnsiFg("#c145ff") << Repeat("=", 50) << ANSI_RESET << "\n";
+    out << hexToAnsiFg("#c145ff") << Repeat("=", 80) << ANSI_RESET << "\n";
 
     out << "\n";
     out << hexToAnsiFg("#165cd6") << "[Arrows] Navigate   [Enter] Enter/Open   [Esc] Back/Quit   [R] Refresh   [Q] Quit" << ANSI_RESET << "\n";
@@ -248,8 +248,7 @@ static void renderAll(
         
         // Outside project-level
         std::string nameColor;
-        if((cur.mode == Mode::SelectProject && (int)pi == cur.projectIdx) ||
-            (cur.mode == Mode::InsideProject && (int)pi == cur.projectIdx)) {
+        if(cur.mode == Mode::InsideProject && (int)pi == cur.projectIdx) {
             nameColor = styleCode("bold") + hexToAnsiFg("#00ff00");
         } else {
             nameColor = hexToAnsiFg("#009e00"); 
