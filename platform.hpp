@@ -27,7 +27,7 @@
     #include <unistd.h>
     #include <fcntl.h>
     #include <errno.h>
-    using socket_t = int
+    using socket_t = int;
     static constexpr socket_t INVALID_SOCK = -1;
 #endif
 

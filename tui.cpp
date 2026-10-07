@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <cctype>
 
 namespace smon {
 
@@ -76,7 +77,7 @@ static DWORD g_oldOutMode   = 0;
 #else
 static termios g_oldTermios;
 static bool g_termiosSaved  = false;
-#endif;
+#endif
 
 void terminalInit() {
 #ifdef _WIN32
@@ -122,10 +123,10 @@ Key readKey() {
     if(c == 0 || c == 0xE0) {
         int c2 = _getch();
         switch(c2) {
-            case 38:            return Key::Up;
-            case 40:            return Key::Down;
-            case 37:            return Key::Left;
-            case 39:            return Key::Right;
+            case 72:            return Key::Up;
+            case 80:            return Key::Down;
+            case 75:            return Key::Left;
+            case 77:            return Key::Right;
         }
         return Key::None;
     }
@@ -150,23 +151,23 @@ Key readKey() {
 
         int n1 = ::read(STDIN_FILENO, &seq[0], 1);
         if(n1 != 1) {
-            tcsetattr(STDIN_FILENO, TCANOW, &t);
+            tcsetattr(STDIN_FILENO, TCSANOW, &t);
             return Key::Escape;
         }
         int n2 = ::read(STDIN_FILENO, &seq[1], 1);
         tcsetattr(STDIN_FILENO, TCSANOW, &t);
         if(n1 == 1 && n2 == 1 && seq[0] == '[') {
             switch(seq[1]) {
-                case 'KEY_UP':      return Key::Up;
-                case 'KEY_DOWN':    return Key::Down;
-                case 'KEY_RIGHT':   return Key::Right;
-                case 'KEY_LEFT':    return Key::Left;
+                case 'A':           return Key::Up;
+                case 'B':           return Key::Down;
+                case 'C':           return Key::Right;
+                case 'D':           return Key::Left;
             }
         }
         return Key::Escape;
     }
     if(k == 'q')                    return Key::Quit;
-    if(k == 'r')                    return Key::Refersh;
+    if(k == 'r')                    return Key::Refresh;
     if(c == '\n' || c == '\r')      return Key::Enter;
     return Key::None;
 #endif   
@@ -265,6 +266,7 @@ static void renderAll(
                     bool cellSel = rowSelected && ((int)c == cur.col);
                     std::string cell = row.fields[c].value;
                     if(cellSel) cell = "[" + cell + "]";
+                    out << padRight(cell, cw.widths[c] + (cellSel ? 2 : 0));
                     if(c + 1 < row.fields.size()) out << "  |  ";
                 }
 

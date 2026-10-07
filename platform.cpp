@@ -2,7 +2,7 @@
 
 namespace smon {
 
-bool socket_init() {
+bool socketInit() {
 #ifdef _WIN32
     WSADATA wsa;
     return WSAStartup(MAKEWORD(2, 2), &wsa) == 0;
@@ -11,13 +11,13 @@ bool socket_init() {
 #endif
 }
 
-void socket_cleanup() {
+void socketCleanup() {
 #ifdef _WIN32
     WSACleanup();
 #endif
 }
 
-void close_socket(socket_t s) {
+void closeSocket(socket_t s) {
     if (s == INVALID_SOCK) return;
 #ifdef _WIN32
     closesocket(s);
@@ -26,7 +26,7 @@ void close_socket(socket_t s) {
 #endif
 }
 
-bool set_nonblocking(socket_t s, bool nonblocking) {
+bool setNonblocking(socket_t s, bool nonblocking) {
 #ifdef _WIN32
     u_long mode = nonblocking ? 1 : 0;
     return ioctlsocket(s, FIONBIO, &mode) == 0;
