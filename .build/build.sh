@@ -1,18 +1,18 @@
+cat > .build/build.sh << 'EOF'
 #!/bin/bash
 set -e
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BUILD_DIR="$ROOT_DIR/.build"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+BUILD_DIR="$SCRIPT_DIR"
 OUT="$BUILD_DIR/server_monitor"
 
 echo "Building server-monitor..."
 echo "====================================================="
 
-mkdir -p "$BUILD_DIR"
-
 echo
 echo "Cleaning previous builds..."
-rm -f "$BUILD_DIR/server_monitor"
+rm -f "$OUT"
 
 echo
 echo "Collecting .cpp files..."
@@ -40,3 +40,4 @@ else
     echo "ERROR: Output not created."
     exit 1
 fi
+EOF
