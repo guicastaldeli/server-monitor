@@ -23,8 +23,11 @@
 #endif
 
 namespace smon {
-    bool socketInit();
-    void socketCleanup();
-    void closeSocket(socket_t s);
-    bool setNonblocking(socket_t s, bool nonblocking);
+
+// Sockets
+bool socketInit();
+void socketCleanup();
+void closeSocket(socket_t s);
+bool setNonblocking(socket_t s, bool nonblocking);
+
 }
