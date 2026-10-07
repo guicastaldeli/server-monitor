@@ -280,8 +280,9 @@ static void renderAll(
             // header row
             for(const auto& r : pv.rows) {
                 if(!r.isEndpoint) continue;
-                out << "  ";
+                out << "     ";
                 for(size_t c = 0; c < r.fields.size(); ++c) {
+                    out << "  ";
                     out << padRight(r.fields[c].label, cw.widths[c]);
                     if(c + 1 < r.fields.size()) out << "  |  ";
                 }
