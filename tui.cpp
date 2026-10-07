@@ -1,5 +1,7 @@
 #include "tui.hpp"
 #include "platform.hpp"
+#include "color.hpp"
+#include "status.hpp"
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -12,6 +14,13 @@ namespace smon {
 char ConvKey(char c) {
     char val = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
     return val;
+}
+
+static std::string Repeat(const std::string& s, size_t count) {
+    std::string out;
+    out.reserve(s.size() * count);
+    for(size_t i = 0; i < count; i++) out.append(s);
+    return out;
 }
 
 static std::string padRight(const std::string& s, size_t w) {
@@ -33,7 +42,9 @@ static ColWidths computeWidths(const ProjectView& pv) {
             cw.widths[i] = std::max(cw.widths[i], r.fields[i].label.size());
             cw.widths[i] = std::max(cw.widths[i], r.fields[i].value.size());
         }
-        if(r.status.size() > cw.statusWidth) cw.statusWidth = r.status.size();
+
+        size_t labelWidth = std::string(infoOf(r.status).label).size();
+        if(labelWidth > cw.statusWidth) cw.statusWidth = labelWidth;
     }
 
     return cw;
@@ -202,12 +213,17 @@ static void renderAll(
 ) {
     std::ostringstream out;
 
-    out << "================\n";
+    out << Repeat("=", 50) << "\n";
     out << "\n";
-    out << "Server Monitor\n";
+    out << Repeat(" ", 17) << "Server Monitor\n";
     out << "\n";
-    out << "================\n\n";
-    out << "-- Folder: " << rootFolder << "\n\n";
+    out << Repeat("=", 50) << "\n";
+
+    out << "\n";
+    out << "[Arrows] Navigate   [Enter] Enter/Open   [Esc] Back/Quit   [R] Refresh   [Q] Quit\n";
+    out << "\n";
+
+    out << "--- Folder: " << rootFolder << "\n\n";
     out << "PROJECTS:\n\n";
 
     for(size_t pi = 0; pi < views.size(); ++pi) {
@@ -270,15 +286,16 @@ static void renderAll(
                     if(c + 1 < row.fields.size()) out << "  |  ";
                 }
 
-                std::string st = row.status.empty() ? "unknown" : row.status;
-                out << "  |  " << padRight(st, cw.statusWidth) << "\n";
+                const auto& info = infoOf(row.status);
+                std::string colorStart = hexToAnsiFg(info.color);
+                out << "  |  " << colorStart 
+                    << padRight(info.label, cw.statusWidth)
+                    << ANSI_RESET << "\n";
             }
         }
 
         out << "\n";
     }
-
-    out << "[Arrows] Navigate   [Enter] Enter/Open   [Esc] Back/Quit   [R] Refresh   [Q] Quit\n";
 
     clearScreen();
     std::cout << out.str() << std::flush;

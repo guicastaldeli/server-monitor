@@ -1,6 +1,7 @@
 #pragma once
 
 #include "endpoint.hpp"
+#include "status.hpp"
 #include <string>
 #include <unordered_map>
 #include <mutex>
@@ -20,7 +21,7 @@ public:
     void stop();
     void requestRefresh();
 
-    std::string statusOf(const std::string& service,
+    Status statusOf(const std::string& service,
                             const std::string& rawUrl) const;
 
 private:
@@ -37,7 +38,7 @@ private:
 
     std::vector<Target> targets;
     mutable std::mutex mutex;
-    std::unordered_map<std::string, std::string> status;
+    std::unordered_map<std::string, Status> status;
     std::thread worker;
     std::atomic<bool> stop_{false};
     std::atomic<bool> refresh{false};

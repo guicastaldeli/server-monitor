@@ -2,6 +2,7 @@
 
 #include "endpoint.hpp"
 #include "field.hpp"
+#include "status.hpp"
 #include <string>
 #include <vector>
 
@@ -10,7 +11,7 @@ namespace smon {
     struct Row {
         bool isEndpoint = false;
         std::vector<FieldInfo> fields;
-        std::string status;
+        Status status = Status::Unknown;
         int sourceIndex = 0;
     };
 

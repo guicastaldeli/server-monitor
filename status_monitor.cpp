@@ -28,7 +28,7 @@ void StatusMonitor::registerEndpoints(const std::vector<Project>& projects) {
             t.host = e.checkHost;
             t.port = e.checkPort;
             targets.push_back(t);
-            status[makeKey(e.service, e.rawUrl)] = "unknown";
+            status[makeKey(e.service, e.rawUrl)] = Status::Unknown;
         }
     }
 }
@@ -47,10 +47,10 @@ void StatusMonitor::requestRefresh() {
     refresh.store(true);
 }
 
-std::string StatusMonitor::statusOf(const std::string& service, const std::string& rawUrl) const {
+Status StatusMonitor::statusOf(const std::string& service, const std::string& rawUrl) const {
     std::lock_guard<std::mutex> lock(mutex);
     auto it = status.find(makeKey(service, rawUrl));
-    if(it == status.end()) return "unknown";
+    if(it == status.end()) return Status::Unknown;
     return it->second;
 }
 
@@ -65,7 +65,7 @@ void StatusMonitor::loop() {
 
         for(const auto& t : snapshot) {
             if(stop_.load()) return;
-            std::string st = checkStatus(t.host, t.port);
+            Status st = checkStatus(t.host, t.port);
             {
                 std::lock_guard<std::mutex> lock(mutex);
                 status[makeKey(t.service, t.rawUrl)] = st;

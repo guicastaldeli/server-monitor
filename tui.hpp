@@ -38,6 +38,7 @@ struct ColWidths {
 };
 
 char ConvKey(char c);
+static std::string Repeat(const std::string& s, size_t count);
 
 static std::string padRight(const std::string& s, size_t w);
 static ColWidths computeWidths(const ProjectView& pv);
