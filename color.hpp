@@ -106,7 +106,7 @@ static bool blinkOn(int halfPeriodMs = HALF_PERIOD_MS) {
     return (elapsed / halfPeriodMs % 2 == 0);    
 }
 
-static void darkenColor(RGB rgb) {
+static void darkenColor(RGB& rgb) {
     rgb.r = rgb.r * 4 / 10;
     rgb.g = rgb.g * 4 / 10;
     rgb.b = rgb.b * 4 / 10;

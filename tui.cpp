@@ -333,7 +333,7 @@ static void renderAll(
                 #endif
                 }
 
-                std::string colorStart = hexToAnsiFg(info.color);
+                std::string colorStart = toAnsiFg(baseRgb);
                 out << "  |  " << stylePrefix << colorStart
                     << padRight(info.label, cw.statusWidth)
                     << ANSI_RESET << "\n";
