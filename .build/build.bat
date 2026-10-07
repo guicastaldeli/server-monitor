@@ -52,7 +52,7 @@ g++ -std=c++17 -O2 -static-libgcc -static-libstdc++ ^
     -o "%OUT_EXE%" ^
     !CPP_LIST! ^
     -lws2_32
-r
+
 if %errorlevel% neq 0 (
     echo ERROR: Build failed.
     pause

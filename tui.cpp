@@ -317,10 +317,18 @@ static void renderAll(
                 }
 
                 const auto& info = infoOf(row.status);
-                std::string colorStart = styleCodes(info.styles) + hexToAnsiFg(info.color);
-                std::string statusStyle;
-                if(blinkOn()) statusStyle = styleCode("dim");
-                out << "  |  " << statusStyle << colorStart 
+                std::string stylePrefix;
+                bool wblink = false;
+                for(const auto& s : info.styles) {
+                    if(s == "blink") { wblink = true; continue; }
+                    stylePrefix += styleCode(s);
+                }
+                if(wblink && blinkOn()) {
+                    stylePrefix += styleCode("dim");
+                }
+
+                std::string colorStart = hexToAnsiFg(info.color);
+                out << "  |  " << stylePrefix << colorStart
                     << padRight(info.label, cw.statusWidth)
                     << ANSI_RESET << "\n";
             }
