@@ -16,6 +16,7 @@
     #include <termios.h>
     #include <unistd.h>
     #include <cstdio>
+    #include <sys/select.h>
 #endif
 
 namespace smon {

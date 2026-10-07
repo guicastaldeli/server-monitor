@@ -129,8 +129,10 @@ void terminalRestore() {
 
 Key readKey() {
 #ifdef _WIN32
+    if(!_kbhit()) return Key::None;
+
     int c = _getch();
-    char k = ConvKey((char(c)));
+    char k = ConvKey((char)c);
     if(c == 0 || c == 0xE0) {
         int c2 = _getch();
         switch(c2) {
@@ -147,6 +149,16 @@ Key readKey() {
     if(c == 13 || c == 10)      return Key::Enter;
     return Key::None;
 #else
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+    timeval tv;
+    tv.tv_sec = 0;
+    tv.tv_usec = 100000;
+
+    int sel = ::select(STDIN_FILENO + 1, &fds, nullptr, nullptr, &tv);
+    if(sel <= 0) return Key::None;
+
     unsigned char c;
     char k = ConvKey((char)c);
     if(::read(STDIN_FILENO, &c, 1) != 1) return Key::None;
@@ -319,6 +331,8 @@ void render(
         renderAll(rootFolder, views, cur, monitor);
 
         Key k = readKey();
+        if(k == Key::None) continue;
+        
         switch(k) {
             // Quit
             case Key::Quit:
