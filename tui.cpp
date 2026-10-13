@@ -148,6 +148,7 @@ Key readKey() {
     if(k == 'r')                return Key::Refresh;
     if(c == 27)                 return Key::Escape;
     if(c == 13 || c == 10)      return Key::Enter;
+    if(c == 32)                 return Key::Space;
     return Key::None;
 #else
     fd_set fds;
@@ -193,6 +194,7 @@ Key readKey() {
     if(k == 'q')                    return Key::Quit;
     if(k == 'r')                    return Key::Refresh;
     if(c == '\n' || c == '\r')      return Key::Enter;
+    if(c == ' ')                    return Key::Space;
     return Key::None;
 #endif   
 }
@@ -237,7 +239,9 @@ static void renderAll(
     out << hexToAnsiFg("#dfb3f4") << Repeat("=", 60) << ANSI_RESET << "\n";
 
     out << "\n";
-    out << hexToAnsiFg("#165cd6") << "[Arrows] Navigate   [Enter] Enter/Open   [Esc] Back/Quit   [R] Refresh   [Q] Quit" << ANSI_RESET << "\n";
+    out << hexToAnsiFg("#165cd6")
+    << "[Arrows] Navigate   [Enter] Open   [Space] Logs   [Esc] Back/Quit   [R] Refresh   [Q] Quit"
+    << ANSI_RESET << "\n";
     out << "\n";
 
     out << hexToAnsiFg("#d6cc16") << "--- Folder: " << rootFolder << ANSI_RESET << "\n\n";
@@ -459,6 +463,33 @@ void render(
                     running = false;
                 }
             } break;
+            // Space
+            case Key::Space: {
+                if(cur.mode != Mode::InsideProject) break;
+
+                const auto& pv = views[cur.projectIdx];
+                if(cur.row < 0 || cur.row >= (int)pv.rows.size()) break;
+
+                const auto& row = pv.rows[cur.row];
+                if(!row.isEndpoint) break;
+
+                if(cur.projectIdx >= (int)projects.size()) break;
+                const auto& proj = projects[cur.projectIdx];
+                if(row.sourceIndex < 0 || row.sourceIndex >= (int)proj.endpoints.size()) break;
+            
+                const auto& ep = proj.endpoints[row.sourceIndex];
+
+                terminalRestore();
+                showCursor();
+
+                std::cout << "\n--- docker compose logs -f " << ep.service << " (Ctrl+C to exit) ---\n\n" << std::flush;
+
+                openComposeLogs(proj.path, proj.composePath, ep.service);
+
+                std::cout << "\n--- Back to Server Monitor ---\n" << std::flush;
+                terminalInit();
+                hideCursor();
+            }
 
             default:
                 break;
@@ -474,6 +505,34 @@ void render(
 /**
  * 
  * Openers
+ * 
+ */
+bool openComposeLogs(
+    const std::string& projectPath,
+    const std::string& composePath,
+    const std::string& service
+) {
+    if(service.empty()) return false;
+
+    terminalRestore();
+
+    std::string cmd;
+#ifdef _WIN32
+    cmd = "cmd /c \"docker compose -f \"" + composePath + "\" logs -f " + service + "\"";
+#else
+    cmd = "docker compose -f '" + composePath + "' logs -f " + service;
+#endif
+
+    int rc = std::system(cmd.c_str());
+
+    terminalInit();
+
+    return rc == 0;
+}
+
+/**
+ * 
+ * External Openers
  * 
  */
 bool openInBrowser(const std::string& url) {

@@ -59,7 +59,7 @@ static void dispatchAction(const FieldInfo& f);
  */
 enum class Key { None, 
                 Up, Down, Left, Right,
-                Enter, Escape, 
+                Enter, Escape, Space,
                 Quit, Refresh };
 
 void terminalInit();

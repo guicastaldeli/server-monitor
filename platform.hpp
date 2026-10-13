@@ -45,6 +45,15 @@ bool setNonblocking(socket_t s, bool nonblocking);
 
 /**
  * 
+ * Openers
+ * 
+ */
+bool openComposeLogs(const std::string& projectPath,
+                    const std::string& composePath,
+                    const std::string& service);
+
+/**
+ * 
  * External openers
  * 
  */
