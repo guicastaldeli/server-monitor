@@ -240,7 +240,7 @@ static void renderAll(
 
     out << "\n";
     out << hexToAnsiFg("#165cd6")
-    << "[Arrows] Navigate   [Enter] Open   [Space] Logs   [Esc] Back/Quit   [R] Refresh   [Q] Quit"
+    << "[Arrows] Navigate   [Enter] Open   [Space] Logs   [Ctrl+C] Exit Logs [Esc] Back/Quit   [R] Refresh   [Q] Quit"
     << ANSI_RESET << "\n";
     out << "\n";
 
