@@ -197,8 +197,8 @@ std::vector<Endpoint> parseCompose(const std::string& path) {
                 }
             }
 
-            if(t.rfind("url:", 0) == 0) {
-                urlValue = detail::trim(t.substr(4));
+            if(t.rfind("x-url:", 0) == 0) {
+                urlValue = detail::trim(t.substr(6));
                 continue;
             }
             if(t == "ports:") {
