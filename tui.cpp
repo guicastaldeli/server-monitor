@@ -247,18 +247,29 @@ static std::string build(
 ) {
     std::ostringstream out;
 
-    out << hexToAnsiFg("#dfb3f4") << Repeat("=", 60) << ANSI_RESET << "\n";
-    out << "\n";
-    out << Repeat(" ", 24) << hexToAnsiFg("#c36eed") << "Server Monitor" << ANSI_RESET << "\n";
-    out << "\n";
-    out << hexToAnsiFg("#dfb3f4") << Repeat("=", 60) << ANSI_RESET << "\n";
-    out << "\n";
-    out << hexToAnsiFg("#165cd6")
-        << "[Arrows] Navigate   [Enter] Open   [Space] Logs   [Esc] Back/Quit   [R] Refresh   [Q] Quit"
-        << ANSI_RESET << "\n";
-    out << "\n";
-    out << hexToAnsiFg("#d6cc16") << "--- Folder: " << rootFolder << ANSI_RESET << "\n\n";
-    out << "PROJECTS:\n\n";
+    int maxRows = getTerminalRows() - 1;
+    if(maxRows < 5) maxRows = 5;
+    int written = 0;
+
+    auto put = [&](const std::string& s) {
+        out << s;
+        ++written;
+    };
+
+    put(hexToAnsiFg("#dfb3f4") + Repeat("=", 60) + ANSI_RESET + "\n");
+    put("\n");
+    put(Repeat(" ", 24) + hexToAnsiFg("#c36eed") + "Server Monitor" + ANSI_RESET + "\n");
+    put("\n");
+    put(hexToAnsiFg("#dfb3f4") + Repeat("=", 60) + ANSI_RESET + "\n");
+    put("\n");
+    put(hexToAnsiFg("#165cd6")
+        + "[Arrows] Navigate   [Enter] Open   [Space] Logs   [Esc] Back/Quit   [R] Refresh   [Q] Quit"
+        + ANSI_RESET + "\n");
+    put("\n");
+    put(hexToAnsiFg("#d6cc16") + "--- Folder: " + rootFolder + ANSI_RESET + "\n\n");
+    put("PROJECTS:\n\n");
+
+    int headerLines = written;
 
     for(size_t pi = 0; pi < views.size(); ++pi) {
         const auto& pv = views[pi];
@@ -271,11 +282,11 @@ static std::string build(
         }
 
         if(cur.mode == Mode::SelectProject && (int)pi == cur.projectIdx) {
-            out << CURSOR_CHAR << nameColor << pv.name << ANSI_RESET << "\n";
+            put(CURSOR_CHAR + nameColor + pv.name + ANSI_RESET + "\n");
         } else if(cur.mode == Mode::InsideProject && (int)pi == cur.projectIdx) {
-            out << "** " << nameColor << pv.name << ANSI_RESET << "\n";
+            put("** " + nameColor + pv.name + ANSI_RESET + "\n");
         } else {
-            out << "   " << nameColor << pv.name << ANSI_RESET << "\n";
+            put("   " + nameColor + pv.name + ANSI_RESET + "\n");
         }
 
         for(size_t r = 0; r < pv.rows.size(); ++r) {
@@ -286,13 +297,13 @@ static std::string build(
                             ((int)pi == cur.projectIdx) &&
                             ((int)r == cur.row) &&
                             ((int)c == cur.col);
-                out << (sel ? "   > " : "     ")
-                    << row.fields[c].label << ": "
-                    << row.fields[c].value << "\n";
+                put(std::string(sel ? "   > " : "     ")
+                    + row.fields[c].label + ": "
+                    + row.fields[c].value + "\n");
             }
         }
 
-        out << "       " << Repeat("-", 60) << "\n";
+        put("       " + Repeat("-", 60) + "\n");
 
         bool hasEndpoints = false;
         for(const auto& r : pv.rows) if(r.isEndpoint) { hasEndpoints = true; break; }
@@ -301,12 +312,14 @@ static std::string build(
 
             for(const auto& r : pv.rows) {
                 if(!r.isEndpoint) continue;
-                out << "     ";
+                std::string headerLine = "     ";
                 for(size_t c = 0; c < r.fields.size(); ++c) {
-                    out << "  " << padRight(r.fields[c].label, cw.widths[c]);
-                    if(c + 1 < r.fields.size()) out << "  |  ";
+                    headerLine += "  ";
+                    headerLine += padRight(r.fields[c].label, cw.widths[c]);
+                    if(c + 1 < r.fields.size()) headerLine += "  |  ";
                 }
-                out << "  |  " << padRight("STATUS", cw.statusWidth) << "\n";
+                headerLine += "  |  " + padRight("STATUS", cw.statusWidth) + "\n";
+                put(headerLine);
                 break;
             }
 
@@ -317,7 +330,7 @@ static std::string build(
                 bool rowSelected = (cur.mode == Mode::InsideProject) &&
                                     ((int)pi == cur.projectIdx) &&
                                     ((int)r == cur.row);
-                out << "     ";
+                std::string rowLine = "     ";
                 for(size_t c = 0; c < row.fields.size(); ++c) {
                     bool cellSel = rowSelected && ((int)c == cur.col);
                     bool hovered = cellSel && row.fields[c].isUrl;
@@ -334,11 +347,11 @@ static std::string build(
                     }
 
                     std::string cell = row.fields[c].value;
-                    out << (cellSel ? CURSOR_CHAR : "  ");
-                    out << cellStyle;
-                    out << padRight(cell, cw.widths[c]);
-                    if(!cellStyle.empty()) out << ANSI_RESET;
-                    if(c + 1 < row.fields.size()) out << "  |  ";
+                    rowLine += (cellSel ? CURSOR_CHAR : "  ");
+                    rowLine += cellStyle;
+                    rowLine += padRight(cell, cw.widths[c]);
+                    if(!cellStyle.empty()) rowLine += ANSI_RESET;
+                    if(c + 1 < row.fields.size()) rowLine += "  |  ";
                 }
 
                 const auto& info = infoOf(row.status);
@@ -359,13 +372,14 @@ static std::string build(
                 }
 
                 std::string colorStart = toAnsiFg(baseRgb);
-                out << "  |  " << stylePrefix << colorStart
-                    << padRight(info.label, cw.statusWidth)
-                    << ANSI_RESET << "\n";
+                rowLine += "  |  " + stylePrefix + colorStart
+                    + padRight(info.label, cw.statusWidth)
+                    + ANSI_RESET + "\n";
+                put(rowLine);
             }
         }
 
-        out << "\n";
+        put("\n");
     }
 
     std::string full = out.str();
@@ -376,18 +390,14 @@ static std::string build(
         while(std::getline(ss, ln)) lines.push_back(ln + "\n");
     }
 
-    int maxRows = getTerminalRows() - 1;
-    if(maxRows < 5) maxRows = 5;
-
-    int start = cur.scrollOffset;
-    if(start < 0) start = 0;
-    if(start > (int)lines.size()) start = (int)lines.size();
-
-    int end = start + maxRows;
-    if(end > (int)lines.size()) end = (int)lines.size();
-
     std::ostringstream sliced;
-    for(int i = start; i < end; ++i) sliced << lines[i];
+    for(int i = 0; i < headerLines && i < (int)lines.size(); ++i) sliced << lines[i];
+
+    int bodyStart = cur.scrollOffset;
+    int bodyEnd = bodyStart + (maxRows - headerLines);
+    if(bodyEnd > (int)lines.size()) bodyEnd = (int)lines.size();
+
+    for(int i = bodyStart; i < bodyEnd; ++i) sliced << lines[i];
 
     return sliced.str();
 }
