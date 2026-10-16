@@ -212,7 +212,11 @@ std::vector<Endpoint> parseCompose(const std::string& path) {
             auto u = detail::parseUrl(urlValue);
             ep.displayUrl = detail::stripQuotes(urlValue);
 
-            if(u.hasPort) {
+            if(!portSpecs.empty()) {
+                const auto& ps = portSpecs.front();
+                ep.checkHost = ps.bindIp.empty() ? "localhost" : ps.bindIp;
+                ep.checkPort = ps.hostPort;
+            } else if(u.hasPort) {
                 ep.checkHost = u.host;
                 ep.checkPort = u.port;
             } else {
@@ -220,9 +224,6 @@ std::vector<Endpoint> parseCompose(const std::string& path) {
                 std::string raw = detail::stripQuotes(urlValue);
                 bool https = raw.find("https://", 0) == 0;
                 ep.checkPort = https ? 443 : 80;
-            }
-            if(!u.hasPort && !portSpecs.empty()) {
-                ep.checkPort = portSpecs.front().hostPort;
             }
 
             ep.rawUrl = ep.checkHost + ":" + std::to_string(ep.checkPort);
