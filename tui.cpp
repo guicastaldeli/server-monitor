@@ -383,13 +383,7 @@ static void renderAll(
         put("\n");
     }
 
-    if(written >= maxRows) {
-        out << hexToAnsiFg("#818161")
-            << "--- output truncated (resize terminal or scroll) ---"
-            << ANSI_RESET << "\n";
-    }
-
-    std::cout << "\x1b[H" << out.str() << "\x1b[J" << std::flush;
+    std::cout << "\x1b[H\x1b[J" << out.str() << std::flush;
 }
 
 void render(
