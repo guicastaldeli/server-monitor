@@ -480,7 +480,7 @@ static std::string build(
     std::ostringstream sliced;
     for(int i = 0; i < headerLines && i < (int)lines.size(); ++i) sliced << lines[i];
 
-    int bodyStart = cur.scrollOffset;
+    int bodyStart = headerLines + cur.scrollOffset;
     int bodyEnd = bodyStart + (maxRows - headerLines);
     if(bodyEnd > (int)lines.size()) bodyEnd = (int)lines.size();
 
