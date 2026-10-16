@@ -34,8 +34,7 @@ struct CursorState {
     int projectIdx = 0;
     int row = 0;
     int col = 0;
-    int vScrollOffset = 0;
-    int hScrollOffset = 0;
+    int scrollOffset = 0;
 };
 
 struct ColWidths {
@@ -48,8 +47,6 @@ static std::string Repeat(const std::string& s, size_t count);
 
 static int getTerminalRows();
 static int getTerminalCols();
-static std::string skipVisible(const std::string& s, int skip);
-static std::string truncateVisible(const std::string& s, int maxWidth);
 static int visibleLength(const std::string& s);
 static std::string padRight(const std::string& s, size_t w);
 static ColWidths computeWidths(const ProjectView& pv);
@@ -68,8 +65,7 @@ enum class Key { None,
                 Up, Down, Left, Right,
                 Enter, Escape, Space,
                 Quit, Refresh,
-                VScrollUp, VScrollDown,
-                HScrollLeft, HScrollRight };
+                ScrollUp, ScrollDown };
 
 void terminalInit();
 void terminalRestore();

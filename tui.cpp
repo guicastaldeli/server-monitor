@@ -69,62 +69,6 @@ static int visibleLength(const std::string& s) {
     return count;
 }
 
-static std::string truncateVisible(const std::string& s, int maxWidth) {
-    if(visibleLength(s) <= maxWidth) return s;
-
-    std::string out;
-    int count = 0;
-    bool inEscape = false;
-    bool hadStyle = false;
-    for(char c : s) {
-        if(inEscape) {
-            out += c;
-            if(c == 'm') inEscape = false;
-            continue;
-        }
-        if(c == '\x1b') {
-            inEscape = true;
-            hadStyle = true;
-            out += c;
-            continue;
-        }
-        if(count >= maxWidth) break;
-        out += c;
-        ++count;
-    }
-    if(hadStyle) out += ANSI_RESET;
-    return out;
-}
-
-static std::string skipVisible(const std::string& s, int skip) {
-    if(skip <= 0) return s;
-
-    std::string out;
-    int count = 0;
-    bool inEscape = false;
-    for(size_t i = 0; i < s.size(); ++i) {
-        char c = s[i];
-        if(inEscape) {
-            out += c;
-            if(c == 'm') inEscape = false;
-            continue;
-        }
-        if(c == '\x1b') {
-            inEscape = true;
-            out += c;
-            continue;
-        }
-        if(count >= skip) {
-            out += c;
-        }
-        else {
-            ++count;
-        }
-    }
-
-    return out;
-}
-
 static std::string padRight(const std::string& s, size_t w) {
     if(s.size() >= w) return s;
     return s + std::string(w - s.size(), ' ');
@@ -296,10 +240,8 @@ Key readKey() {
             if(i < n && seq[i] == ';') ++i;
             while(i < n && seq[i] >= '0' && seq[i] <= '9') { row = row*10 + (seq[i]-'0'); ++i; }
         
-            if(button == 64)        return Key::VScrollUp;
-            if(button == 65)        return Key::VScrollDown;
-            if(button == 66)        return Key::HScrollLeft;
-            if(button == 67)        return Key::HScrollRight;
+            if(button == 64)        return Key::ScrollUp;
+            if(button == 65)        return Key::ScrollDown;
             return Key::None;
         }
 
@@ -498,15 +440,47 @@ static std::string build(
     int cols = getTerminalCols();
     if(cols < 20) cols = 80;
 
+    std::vector<std::string> wrapped;
     for(auto& ln : lines) {
         bool hasNL = !ln.empty() && ln.back() == '\n';
         std::string s = hasNL ? ln.substr(0, ln.size() - 1) : ln;
-        s = skipVisible(s, cur.hScrollOffset);
-        s = truncateVisible(s, cols - 1);
-        ln = s + (hasNL ? "\n" : "");
+        
+        if(visibleLength(s) <= cols - 1) {
+            wrapped.push_back(s + (hasNL ? "\n" : ""));
+            continue;
+        }
+
+        std::string chunk;
+        int count = 0;
+        bool inEscape = false;
+        for(size_t i = 0; i < s.size(); ++i) {
+            char c = s[i];
+            if(inEscape) {
+                chunk += c;
+                if(c == 'm') inEscape = false;
+                continue;
+            }
+            if(c == '\x1b') {
+                inEscape = true;
+                chunk += c;
+                continue;
+            }
+            if(count >= cols - 1) {
+                wrapped.push_back(chunk + "\n");
+                chunk.clear();
+                count = 0;
+            }
+            chunk += c;
+            ++count;
+        }
+        if(!chunk.empty()) {
+            wrapped.push_back(chunk + "\n");
+        }
     }
 
-    int start = cur.vScrollOffset;
+    lines = wrapped;
+
+    int start = cur.scrollOffset;
     if(start < 0) start = 0;
     if(start > (int)lines.size()) start = (int)lines.size();
 
@@ -652,25 +626,15 @@ void render(
                 hideCursor();
                 lastFrame.clear();
             }
-            // Vertical Scroll Up
-            case Key::VScrollUp: {
+            // Scroll Up
+            case Key::ScrollUp: {
                 int limit = 0;
-                if(cur.vScrollOffset > limit) --cur.vScrollOffset;
+                if(cur.scrollOffset > limit) --cur.scrollOffset;
             } break;
-            // Vertical Scroll Down
-            case Key::VScrollDown: {
+            // Scroll Down
+            case Key::ScrollDown: {
                 int limit = 100;
-                if(cur.vScrollOffset < limit) ++cur.vScrollOffset;
-            } break;
-            // Horizontal Scroll Left
-            case Key::HScrollLeft: {
-                int limit = 0;
-                if(cur.hScrollOffset > limit) --cur.hScrollOffset;
-            } break;
-            // Horizontal Scroll Right
-            case Key::HScrollRight: {
-                int limit = 500;
-                if(cur.hScrollOffset < limit) ++cur.hScrollOffset;
+                if(cur.scrollOffset < limit) ++cur.scrollOffset;
             } break;
 
             default:
