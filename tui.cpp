@@ -542,6 +542,8 @@ void render(
                         if(cur.col > maxc) cur.col = maxc;
                     }
                 }
+
+                cur.scrollOffset = cur.projectIdx;
             } break;
             // Down
             case Key::Down: {
@@ -556,6 +558,8 @@ void render(
                         if(cur.col > maxc) cur.col = maxc;
                     }
                 }
+
+                cur.scrollOffset = cur.projectIdx;
             } break;
             // Left
             case Key::Left: {
