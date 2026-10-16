@@ -326,11 +326,9 @@ static std::string build(
 
     int maxRows = getTerminalRows() - 1;
     if(maxRows < 5) maxRows = 5;
-    int written = 0;
 
     auto put = [&](const std::string& s) {
         out << s;
-        for(char ch : s) if(ch == '\n') ++written;
     };
 
     put(hexToAnsiFg("#dfb3f4") + Repeat("=", 60) + ANSI_RESET + "\n");
@@ -345,8 +343,6 @@ static std::string build(
     put("\n");
     put(hexToAnsiFg("#d6cc16") + "--- Folder: " + rootFolder + ANSI_RESET + "\n\n");
     put("PROJECTS:\n\n");
-
-    int headerLines = written;
 
     for(size_t pi = 0; pi < views.size(); ++pi) {
         const auto& pv = views[pi];
@@ -477,14 +473,15 @@ static std::string build(
         ln = s + (hasNL ? "\n" : "");
     }
 
+    int start = cur.scrollOffset;
+    if(start < 0) start = 0;
+    if(start > (int)lines.size()) start = (int)lines.size();
+
+    int end = start + maxRows;
+    if(end > (int)lines.size()) end = (int) lines.size();
+
     std::ostringstream sliced;
-    for(int i = 0; i < headerLines && i < (int)lines.size(); ++i) sliced << lines[i];
-
-    int bodyStart = headerLines + cur.scrollOffset;
-    int bodyEnd = bodyStart + (maxRows - headerLines);
-    if(bodyEnd > (int)lines.size()) bodyEnd = (int)lines.size();
-
-    for(int i = bodyStart; i < bodyEnd; ++i) sliced << lines[i];
+    for(int i = start; i < end; ++i) sliced << lines[i];
 
     return sliced.str();
 }
@@ -538,8 +535,6 @@ void render(
                         if(cur.col > maxc) cur.col = maxc;
                     }
                 }
-
-                if(cur.scrollOffset > 0) --cur.scrollOffset;
             } break;
             // Down
             case Key::Down: {
@@ -554,10 +549,6 @@ void render(
                         if(cur.col > maxc) cur.col = maxc;
                     }
                 }
-
-                int bodyRows = getTerminalRows() - 12;
-                if(bodyRows < 5) bodyRows = 5;
-                if(cur.row >= bodyRows) ++cur.scrollOffset;
             } break;
             // Left
             case Key::Left: {
