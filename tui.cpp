@@ -239,7 +239,7 @@ void moveCursor(int row, int col) {
     std::cout << "\x1b[" << row << ";" << col << "H" << std::flush;
 }
 
-static void renderAll(
+static std::string build(
     const std::string& rootFolder,
     const std::vector<ProjectView>& views,
     const CursorState& cur,
@@ -252,10 +252,8 @@ static void renderAll(
     int written = 0;
 
     auto put = [&](const std::string& s) {
-        if(written < maxRows) {
-            out << s;
-            ++written;
-        }
+        out << s;
+        ++written;
     };
 
     put(hexToAnsiFg("#dfb3f4") + Repeat("=", 60) + ANSI_RESET + "\n");
@@ -265,11 +263,13 @@ static void renderAll(
     put(hexToAnsiFg("#dfb3f4") + Repeat("=", 60) + ANSI_RESET + "\n");
     put("\n");
     put(hexToAnsiFg("#165cd6")
-        + "[Arrows] Navigate   [Enter] Open   [Space] Logs   [Ctrl+C] Exit Logs   [Esc] Back/Quit   [R] Refresh   [Q] Quit"
+        + "[Arrows] Navigate   [Enter] Open   [Space] Logs   [Esc] Back/Quit   [R] Refresh   [Q] Quit"
         + ANSI_RESET + "\n");
     put("\n");
     put(hexToAnsiFg("#d6cc16") + "--- Folder: " + rootFolder + ANSI_RESET + "\n\n");
     put("PROJECTS:\n\n");
+
+    int headerLines = written;
 
     for(size_t pi = 0; pi < views.size(); ++pi) {
         const auto& pv = views[pi];
@@ -310,7 +310,6 @@ static void renderAll(
         if(hasEndpoints) {
             ColWidths cw = computeWidths(pv);
 
-            // header row
             for(const auto& r : pv.rows) {
                 if(!r.isEndpoint) continue;
                 std::string headerLine = "     ";
@@ -383,7 +382,24 @@ static void renderAll(
         put("\n");
     }
 
-    std::cout << "\x1b[H\x1b[J" << out.str() << std::flush;
+    std::string full = out.str();
+    std::vector<std::string> lines;
+    {
+        std::stringstream ss(full);
+        std::string ln;
+        while(std::getline(ss, ln)) lines.push_back(ln + "\n");
+    }
+
+    std::ostringstream sliced;
+    for(int i = 0; i < headerLines && i < (int)lines.size(); ++i) sliced << lines[i];
+
+    int bodyStart = cur.scrollOffset;
+    int bodyEnd = bodyStart + (maxRows - headerLines);
+    if(bodyEnd > (int)lines.size()) bodyEnd = (int)lines.size();
+
+    for(int i = bodyStart; i < bodyEnd; ++i) sliced << lines[i];
+
+    return sliced.str();
 }
 
 void render(
@@ -400,10 +416,15 @@ void render(
 
     clear();
 
+    std::string lastFrame;
     bool running = true;
     while(running) {
         refreshRowStatuses(views, projects, monitor);
-        renderAll(rootFolder, views, cur, monitor);
+        std::string frame = build(rootFolder, views, cur, monitor);
+        if(frame != lastFrame) {
+            std::cout << "\x1b[H\x1b[J" << frame << std::flush;
+            lastFrame = frame;
+        }
 
         Key k = readKey();
         if(k == Key::None) continue;
@@ -430,6 +451,8 @@ void render(
                         if(cur.col > maxc) cur.col = maxc;
                     }
                 }
+
+                if(cur.scrollOffset > 0) --cur.scrollOffset;
             } break;
             // Down
             case Key::Down: {
@@ -444,6 +467,10 @@ void render(
                         if(cur.col > maxc) cur.col = maxc;
                     }
                 }
+
+                int bodyRows = getTerminalRows() - 12;
+                if(bodyRows < 5) bodyRows = 5;
+                if(cur.row >= bodyRows) ++cur.scrollOffset;
             } break;
             // Left
             case Key::Left: {
@@ -512,6 +539,7 @@ void render(
                 std::cout << "\n--- Back to Server Monitor ---\n" << std::flush;
                 terminalInit();
                 hideCursor();
+                lastFrame.clear();
             }
 
             default:
