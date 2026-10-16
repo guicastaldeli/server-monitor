@@ -46,6 +46,9 @@ char ConvKey(char c);
 static std::string Repeat(const std::string& s, size_t count);
 
 static int getTerminalRows();
+static int getTerminalCols();
+static std::string truncateVisible(const std::string& s, int maxWidth);
+static int visibleLength(const std::string& s);
 static std::string padRight(const std::string& s, size_t w);
 static ColWidths computeWidths(const ProjectView& pv);
 static void refreshRowStatuses(std::vector<ProjectView>& views,
@@ -59,10 +62,11 @@ static void dispatchAction(const FieldInfo& f);
  * Terminal
  * 
  */
-enum class Key { None, 
+enum class Key { None,
                 Up, Down, Left, Right,
                 Enter, Escape, Space,
-                Quit, Refresh };
+                Quit, Refresh,
+                ScrollUp, ScrollDown };
 
 void terminalInit();
 void terminalRestore();

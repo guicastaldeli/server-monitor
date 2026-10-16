@@ -59,9 +59,13 @@ static int visibleLength(const std::string& s) {
             if(c == 'm') inEscape = false;
             continue;
         }
-        if(c == '\x1b') { inEscape = true; continue; }
+        if(c == '\x1b') {
+            inEscape = true;
+            continue;
+        }
         ++count;
     }
+
     return count;
 }
 
@@ -184,6 +188,8 @@ void terminalInit() {
     raw.c_cc[VMIN] = 1;
     raw.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+
+    std::cout << "\x1b[?1000h\x1b[?1006h" << std::flush;
 #endif
 }
 
@@ -192,6 +198,7 @@ void terminalRestore() {
     if(g_hStdin != INVALID_HANDLE_VALUE) SetConsoleMode(g_hStdin, g_oldInMode);
     if(g_hStdout != INVALID_HANDLE_VALUE) SetConsoleMode(g_hStdout, g_oldOutMode);
 #else
+    std::cout << "\x1b[?1000l\x1b[?1006l" << std::flush;
     if(g_termiosSaved) tcsetattr(STDIN_FILENO, TCSANOW, &g_oldTermios);
 #endif
 }
@@ -232,7 +239,8 @@ Key readKey() {
     unsigned char c;
     if(::read(STDIN_FILENO, &c, 1) != 1) return Key::None;
     if(c == 27) {
-        unsigned char seq[2];
+        unsigned char seq[16];
+        int n = 0;
         
         termios t;
         tcgetattr(STDIN_FILENO, &t);
@@ -241,14 +249,29 @@ Key readKey() {
         t2.c_cc[VTIME] = 0;
         tcsetattr(STDIN_FILENO, TCSANOW, &t2);
 
-        int n1 = ::read(STDIN_FILENO, &seq[0], 1);
-        if(n1 != 1) {
-            tcsetattr(STDIN_FILENO, TCSANOW, &t);
-            return Key::Escape;
+        while(n < 15) {
+            unsigned char ch;
+            if(::read(STDIN_FILENO, &ch, 1) != 1) break;
+            seq[n++] = ch;
         }
-        int n2 = ::read(STDIN_FILENO, &seq[1], 1);
         tcsetattr(STDIN_FILENO, TCSANOW, &t);
-        if(n1 == 1 && n2 == 1 && seq[0] == '[') {
+
+        if(n == 0) return Key::Escape;
+
+        if(n >= 3 && seq[0] == '[' && seq[1] == '<') {
+            int button = 0, col = 0, row = 0;
+            int i = 2;
+            while(i < n && seq[i] >= '0' && seq[i] <= '9') { button = button*10 + (seq[i]-'0'); ++i; }
+            if(i < n && seq[i] == ';') ++i;
+            while(i < n && seq[i] >= '0' && seq[i] <= '9') { col = col*10 + (seq[i]-'0'); ++i; }
+            if(i < n && seq[i] == ';') ++i;
+            while(i < n && seq[i] >= '0' && seq[i] <= '9') { row = row*10 + (seq[i]-'0'); ++i; }
+        
+            if(button == 64)        return Key::ScrollUp;
+            if(button == 65)        return Key::ScrollDown;
+        }
+
+        if(n >= 2 && seq[0] == '[') {
             switch(seq[1]) {
                 case 'A':           return Key::Up;
                 case 'B':           return Key::Down;
@@ -256,6 +279,7 @@ Key readKey() {
                 case 'D':           return Key::Left;
             }
         }
+
         return Key::Escape;
     }
     char k = ConvKey((char)c);
@@ -300,18 +324,29 @@ static std::string build(
 ) {
     std::ostringstream out;
 
-    out << hexToAnsiFg("#dfb3f4") << Repeat("=", 60) << ANSI_RESET << "\n";
-    out << "\n";
-    out << Repeat(" ", 24) << hexToAnsiFg("#c36eed") << "Server Monitor" << ANSI_RESET << "\n";
-    out << "\n";
-    out << hexToAnsiFg("#dfb3f4") << Repeat("=", 60) << ANSI_RESET << "\n";
-    out << "\n";
-    out << hexToAnsiFg("#165cd6")
-        << "[Arrows] Navigate   [Enter] Open   [Space] Logs   [Esc] Back/Quit   [R] Refresh   [Q] Quit"
-        << ANSI_RESET << "\n";
-    out << "\n";
-    out << hexToAnsiFg("#d6cc16") << "--- Folder: " << rootFolder << ANSI_RESET << "\n\n";
-    out << "PROJECTS:\n\n";
+    int maxRows = getTerminalRows() - 1;
+    if(maxRows < 5) maxRows = 5;
+    int written = 0;
+
+    auto put = [&](const std::string& s) {
+        out << s;
+        for(char ch : s) if(ch == '\n') ++written;
+    };
+
+    put(hexToAnsiFg("#dfb3f4") + Repeat("=", 60) + ANSI_RESET + "\n");
+    put("\n");
+    put(Repeat(" ", 24) + hexToAnsiFg("#c36eed") + "Server Monitor" + ANSI_RESET + "\n");
+    put("\n");
+    put(hexToAnsiFg("#dfb3f4") + Repeat("=", 60) + ANSI_RESET + "\n");
+    put("\n");
+    put(hexToAnsiFg("#165cd6")
+        + "[Arrows] Navigate   [Enter] Open   [Space] Logs   [Esc] Back/Quit   [R] Refresh   [Q] Quit"
+        + ANSI_RESET + "\n");
+    put("\n");
+    put(hexToAnsiFg("#d6cc16") + "--- Folder: " + rootFolder + ANSI_RESET + "\n\n");
+    put("PROJECTS:\n\n");
+
+    int headerLines = written;
 
     for(size_t pi = 0; pi < views.size(); ++pi) {
         const auto& pv = views[pi];
@@ -324,11 +359,11 @@ static std::string build(
         }
 
         if(cur.mode == Mode::SelectProject && (int)pi == cur.projectIdx) {
-            out << CURSOR_CHAR << nameColor << pv.name << ANSI_RESET << "\n";
+            put(CURSOR_CHAR + nameColor + pv.name + ANSI_RESET + "\n");
         } else if(cur.mode == Mode::InsideProject && (int)pi == cur.projectIdx) {
-            out << "** " << nameColor << pv.name << ANSI_RESET << "\n";
+            put("** " + nameColor + pv.name + ANSI_RESET + "\n");
         } else {
-            out << "   " << nameColor << pv.name << ANSI_RESET << "\n";
+            put("   " + nameColor + pv.name + ANSI_RESET + "\n");
         }
 
         for(size_t r = 0; r < pv.rows.size(); ++r) {
@@ -339,13 +374,13 @@ static std::string build(
                             ((int)pi == cur.projectIdx) &&
                             ((int)r == cur.row) &&
                             ((int)c == cur.col);
-                out << (sel ? "   > " : "     ")
-                    << row.fields[c].label << ": "
-                    << row.fields[c].value << "\n";
+                put(std::string(sel ? "   > " : "     ")
+                    + row.fields[c].label + ": "
+                    + row.fields[c].value + "\n");
             }
         }
 
-        out << "       " << Repeat("-", 60) << "\n";
+        put("       " + Repeat("-", 60) + "\n");
 
         bool hasEndpoints = false;
         for(const auto& r : pv.rows) if(r.isEndpoint) { hasEndpoints = true; break; }
@@ -354,12 +389,14 @@ static std::string build(
 
             for(const auto& r : pv.rows) {
                 if(!r.isEndpoint) continue;
-                out << "     ";
+                std::string headerLine = "     ";
                 for(size_t c = 0; c < r.fields.size(); ++c) {
-                    out << "  " << padRight(r.fields[c].label, cw.widths[c]);
-                    if(c + 1 < r.fields.size()) out << "  |  ";
+                    headerLine += "  ";
+                    headerLine += padRight(r.fields[c].label, cw.widths[c]);
+                    if(c + 1 < r.fields.size()) headerLine += "  |  ";
                 }
-                out << "  |  " << padRight("STATUS", cw.statusWidth) << "\n";
+                headerLine += "  |  " + padRight("STATUS", cw.statusWidth) + "\n";
+                put(headerLine);
                 break;
             }
 
@@ -370,7 +407,7 @@ static std::string build(
                 bool rowSelected = (cur.mode == Mode::InsideProject) &&
                                     ((int)pi == cur.projectIdx) &&
                                     ((int)r == cur.row);
-                out << "     ";
+                std::string rowLine = "     ";
                 for(size_t c = 0; c < row.fields.size(); ++c) {
                     bool cellSel = rowSelected && ((int)c == cur.col);
                     bool hovered = cellSel && row.fields[c].isUrl;
@@ -387,11 +424,11 @@ static std::string build(
                     }
 
                     std::string cell = row.fields[c].value;
-                    out << (cellSel ? CURSOR_CHAR : "  ");
-                    out << cellStyle;
-                    out << padRight(cell, cw.widths[c]);
-                    if(!cellStyle.empty()) out << ANSI_RESET;
-                    if(c + 1 < row.fields.size()) out << "  |  ";
+                    rowLine += (cellSel ? CURSOR_CHAR : "  ");
+                    rowLine += cellStyle;
+                    rowLine += padRight(cell, cw.widths[c]);
+                    if(!cellStyle.empty()) rowLine += ANSI_RESET;
+                    if(c + 1 < row.fields.size()) rowLine += "  |  ";
                 }
 
                 const auto& info = infoOf(row.status);
@@ -412,16 +449,16 @@ static std::string build(
                 }
 
                 std::string colorStart = toAnsiFg(baseRgb);
-                out << "  |  " << stylePrefix << colorStart
-                    << padRight(info.label, cw.statusWidth)
-                    << ANSI_RESET << "\n";
+                rowLine += "  |  " + stylePrefix + colorStart
+                    + padRight(info.label, cw.statusWidth)
+                    + ANSI_RESET + "\n";
+                put(rowLine);
             }
         }
 
-        out << "\n";
+        put("\n");
     }
 
-    // Split into lines
     std::string full = out.str();
     std::vector<std::string> lines;
     {
@@ -430,7 +467,6 @@ static std::string build(
         while(std::getline(ss, ln)) lines.push_back(ln + "\n");
     }
 
-    // Truncate each line to terminal width to prevent wrapping
     int cols = getTerminalCols();
     if(cols < 20) cols = 80;
 
@@ -441,19 +477,14 @@ static std::string build(
         ln = s + (hasNL ? "\n" : "");
     }
 
-    // Slice by scrollOffset
-    int maxRows = getTerminalRows() - 1;
-    if(maxRows < 5) maxRows = 5;
-
-    int start = cur.scrollOffset;
-    if(start < 0) start = 0;
-    if(start > (int)lines.size()) start = (int)lines.size();
-
-    int end = start + maxRows;
-    if(end > (int)lines.size()) end = (int)lines.size();
-
     std::ostringstream sliced;
-    for(int i = start; i < end; ++i) sliced << lines[i];
+    for(int i = 0; i < headerLines && i < (int)lines.size(); ++i) sliced << lines[i];
+
+    int bodyStart = cur.scrollOffset;
+    int bodyEnd = bodyStart + (maxRows - headerLines);
+    if(bodyEnd > (int)lines.size()) bodyEnd = (int)lines.size();
+
+    for(int i = bodyStart; i < bodyEnd; ++i) sliced << lines[i];
 
     return sliced.str();
 }
@@ -486,14 +517,15 @@ void render(
         if(k == Key::None) continue;
         
         switch(k) {
+            // Quit
             case Key::Quit:
                 running = false;
                 break;
-
+            // Refresh
             case Key::Refresh:
                 monitor.requestRefresh();
                 break;
-
+            // Up
             case Key::Up: {
                 if(cur.mode == Mode::SelectProject) {
                     if(cur.projectIdx > 0) --cur.projectIdx;
@@ -506,9 +538,10 @@ void render(
                         if(cur.col > maxc) cur.col = maxc;
                     }
                 }
+
                 if(cur.scrollOffset > 0) --cur.scrollOffset;
             } break;
-
+            // Down
             case Key::Down: {
                 if(cur.mode == Mode::SelectProject) {
                     if(cur.projectIdx + 1 < (int)views.size()) ++cur.projectIdx;
@@ -521,17 +554,18 @@ void render(
                         if(cur.col > maxc) cur.col = maxc;
                     }
                 }
+
                 int bodyRows = getTerminalRows() - 12;
                 if(bodyRows < 5) bodyRows = 5;
                 if(cur.row >= bodyRows) ++cur.scrollOffset;
             } break;
-
+            // Left
             case Key::Left: {
                 if(cur.mode == Mode::InsideProject) {
                     if(cur.col > 0) --cur.col;
                 }
             } break;
-
+            // Right
             case Key::Right: {
                 if(cur.mode == Mode::InsideProject) {
                     const auto& pv = views[cur.projectIdx];
@@ -540,14 +574,13 @@ void render(
                     if(cur.col < maxc) ++cur.col;
                 }
             } break;
-
+            // Enter
             case Key::Enter: {
                 if(cur.mode == Mode::SelectProject) {
                     if(!views.empty()) {
                         cur.mode = Mode::InsideProject;
                         cur.row = 0;
                         cur.col = 0;
-                        cur.scrollOffset = 0;
                     }
                 } else {
                     const auto& pv = views[cur.projectIdx];
@@ -559,16 +592,15 @@ void render(
                     }
                 }
             } break;
-
+            // ESC
             case Key::Escape: {
                 if(cur.mode == Mode::InsideProject) {
                     cur.mode = Mode::SelectProject;
-                    cur.scrollOffset = 0;
                 } else {
                     running = false;
                 }
             } break;
-
+            // Space
             case Key::Space: {
                 if(cur.mode != Mode::InsideProject) break;
 
@@ -596,6 +628,16 @@ void render(
                 hideCursor();
                 lastFrame.clear();
             }
+            // Scroll Up
+            case Key::ScrollUp: {
+                int limit = 0;
+                if(cur.scrollOffset > limit) --cur.scrollOffset;
+            } break;
+            // Scroll Down
+            case Key::ScrollDown: {
+                int limit = 100;
+                if(cur.scrollOffset < limit) ++cur.scrollOffset;
+            } break;
 
             default:
                 break;
