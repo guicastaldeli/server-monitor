@@ -39,6 +39,59 @@ static int getTerminalRows() {
 #endif
 }
 
+static int getTerminalCols() {
+#ifdef _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+    return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+#else
+    struct winsize ws;
+    if(ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0) return ws.ws_col;
+    return 80;
+#endif
+}
+
+static int visibleLength(const std::string& s) {
+    int count = 0;
+    bool inEscape = false;
+    for(char c : s) {
+        if(inEscape) {
+            if(c == 'm') inEscape = false;
+            continue;
+        }
+        if(c == '\x1b') { inEscape = true; continue; }
+        ++count;
+    }
+    return count;
+}
+
+static std::string truncateVisible(const std::string& s, int maxWidth) {
+    if(visibleLength(s) <= maxWidth) return s;
+
+    std::string out;
+    int count = 0;
+    bool inEscape = false;
+    bool hadStyle = false;
+    for(char c : s) {
+        if(inEscape) {
+            out += c;
+            if(c == 'm') inEscape = false;
+            continue;
+        }
+        if(c == '\x1b') {
+            inEscape = true;
+            hadStyle = true;
+            out += c;
+            continue;
+        }
+        if(count >= maxWidth) break;
+        out += c;
+        ++count;
+    }
+    if(hadStyle) out += ANSI_RESET;
+    return out;
+}
+
 static std::string padRight(const std::string& s, size_t w) {
     if(s.size() >= w) return s;
     return s + std::string(w - s.size(), ' ');
@@ -177,7 +230,6 @@ Key readKey() {
     if(sel <= 0) return Key::None;
 
     unsigned char c;
-    char k = ConvKey((char)c);
     if(::read(STDIN_FILENO, &c, 1) != 1) return Key::None;
     if(c == 27) {
         unsigned char seq[2];
@@ -206,6 +258,7 @@ Key readKey() {
         }
         return Key::Escape;
     }
+    char k = ConvKey((char)c);
     if(k == 'q')                    return Key::Quit;
     if(k == 'r')                    return Key::Refresh;
     if(c == '\n' || c == '\r')      return Key::Enter;
@@ -247,29 +300,18 @@ static std::string build(
 ) {
     std::ostringstream out;
 
-    int maxRows = getTerminalRows() - 1;
-    if(maxRows < 5) maxRows = 5;
-    int written = 0;
-
-    auto put = [&](const std::string& s) {
-        out << s;
-        ++written;
-    };
-
-    put(hexToAnsiFg("#dfb3f4") + Repeat("=", 60) + ANSI_RESET + "\n");
-    put("\n");
-    put(Repeat(" ", 24) + hexToAnsiFg("#c36eed") + "Server Monitor" + ANSI_RESET + "\n");
-    put("\n");
-    put(hexToAnsiFg("#dfb3f4") + Repeat("=", 60) + ANSI_RESET + "\n");
-    put("\n");
-    put(hexToAnsiFg("#165cd6")
-        + "[Arrows] Navigate   [Enter] Open   [Space] Logs   [Esc] Back/Quit   [R] Refresh   [Q] Quit"
-        + ANSI_RESET + "\n");
-    put("\n");
-    put(hexToAnsiFg("#d6cc16") + "--- Folder: " + rootFolder + ANSI_RESET + "\n\n");
-    put("PROJECTS:\n\n");
-
-    int headerLines = written;
+    out << hexToAnsiFg("#dfb3f4") << Repeat("=", 60) << ANSI_RESET << "\n";
+    out << "\n";
+    out << Repeat(" ", 24) << hexToAnsiFg("#c36eed") << "Server Monitor" << ANSI_RESET << "\n";
+    out << "\n";
+    out << hexToAnsiFg("#dfb3f4") << Repeat("=", 60) << ANSI_RESET << "\n";
+    out << "\n";
+    out << hexToAnsiFg("#165cd6")
+        << "[Arrows] Navigate   [Enter] Open   [Space] Logs   [Esc] Back/Quit   [R] Refresh   [Q] Quit"
+        << ANSI_RESET << "\n";
+    out << "\n";
+    out << hexToAnsiFg("#d6cc16") << "--- Folder: " << rootFolder << ANSI_RESET << "\n\n";
+    out << "PROJECTS:\n\n";
 
     for(size_t pi = 0; pi < views.size(); ++pi) {
         const auto& pv = views[pi];
@@ -282,11 +324,11 @@ static std::string build(
         }
 
         if(cur.mode == Mode::SelectProject && (int)pi == cur.projectIdx) {
-            put(CURSOR_CHAR + nameColor + pv.name + ANSI_RESET + "\n");
+            out << CURSOR_CHAR << nameColor << pv.name << ANSI_RESET << "\n";
         } else if(cur.mode == Mode::InsideProject && (int)pi == cur.projectIdx) {
-            put("** " + nameColor + pv.name + ANSI_RESET + "\n");
+            out << "** " << nameColor << pv.name << ANSI_RESET << "\n";
         } else {
-            put("   " + nameColor + pv.name + ANSI_RESET + "\n");
+            out << "   " << nameColor << pv.name << ANSI_RESET << "\n";
         }
 
         for(size_t r = 0; r < pv.rows.size(); ++r) {
@@ -297,13 +339,13 @@ static std::string build(
                             ((int)pi == cur.projectIdx) &&
                             ((int)r == cur.row) &&
                             ((int)c == cur.col);
-                put(std::string(sel ? "   > " : "     ")
-                    + row.fields[c].label + ": "
-                    + row.fields[c].value + "\n");
+                out << (sel ? "   > " : "     ")
+                    << row.fields[c].label << ": "
+                    << row.fields[c].value << "\n";
             }
         }
 
-        put("       " + Repeat("-", 60) + "\n");
+        out << "       " << Repeat("-", 60) << "\n";
 
         bool hasEndpoints = false;
         for(const auto& r : pv.rows) if(r.isEndpoint) { hasEndpoints = true; break; }
@@ -312,14 +354,12 @@ static std::string build(
 
             for(const auto& r : pv.rows) {
                 if(!r.isEndpoint) continue;
-                std::string headerLine = "     ";
+                out << "     ";
                 for(size_t c = 0; c < r.fields.size(); ++c) {
-                    headerLine += "  ";
-                    headerLine += padRight(r.fields[c].label, cw.widths[c]);
-                    if(c + 1 < r.fields.size()) headerLine += "  |  ";
+                    out << "  " << padRight(r.fields[c].label, cw.widths[c]);
+                    if(c + 1 < r.fields.size()) out << "  |  ";
                 }
-                headerLine += "  |  " + padRight("STATUS", cw.statusWidth) + "\n";
-                put(headerLine);
+                out << "  |  " << padRight("STATUS", cw.statusWidth) << "\n";
                 break;
             }
 
@@ -330,7 +370,7 @@ static std::string build(
                 bool rowSelected = (cur.mode == Mode::InsideProject) &&
                                     ((int)pi == cur.projectIdx) &&
                                     ((int)r == cur.row);
-                std::string rowLine = "     ";
+                out << "     ";
                 for(size_t c = 0; c < row.fields.size(); ++c) {
                     bool cellSel = rowSelected && ((int)c == cur.col);
                     bool hovered = cellSel && row.fields[c].isUrl;
@@ -347,11 +387,11 @@ static std::string build(
                     }
 
                     std::string cell = row.fields[c].value;
-                    rowLine += (cellSel ? CURSOR_CHAR : "  ");
-                    rowLine += cellStyle;
-                    rowLine += padRight(cell, cw.widths[c]);
-                    if(!cellStyle.empty()) rowLine += ANSI_RESET;
-                    if(c + 1 < row.fields.size()) rowLine += "  |  ";
+                    out << (cellSel ? CURSOR_CHAR : "  ");
+                    out << cellStyle;
+                    out << padRight(cell, cw.widths[c]);
+                    if(!cellStyle.empty()) out << ANSI_RESET;
+                    if(c + 1 < row.fields.size()) out << "  |  ";
                 }
 
                 const auto& info = infoOf(row.status);
@@ -372,16 +412,16 @@ static std::string build(
                 }
 
                 std::string colorStart = toAnsiFg(baseRgb);
-                rowLine += "  |  " + stylePrefix + colorStart
-                    + padRight(info.label, cw.statusWidth)
-                    + ANSI_RESET + "\n";
-                put(rowLine);
+                out << "  |  " << stylePrefix << colorStart
+                    << padRight(info.label, cw.statusWidth)
+                    << ANSI_RESET << "\n";
             }
         }
 
-        put("\n");
+        out << "\n";
     }
 
+    // Split into lines
     std::string full = out.str();
     std::vector<std::string> lines;
     {
@@ -390,14 +430,30 @@ static std::string build(
         while(std::getline(ss, ln)) lines.push_back(ln + "\n");
     }
 
+    // Truncate each line to terminal width to prevent wrapping
+    int cols = getTerminalCols();
+    if(cols < 20) cols = 80;
+
+    for(auto& ln : lines) {
+        bool hasNL = !ln.empty() && ln.back() == '\n';
+        std::string s = hasNL ? ln.substr(0, ln.size() - 1) : ln;
+        s = truncateVisible(s, cols - 1);
+        ln = s + (hasNL ? "\n" : "");
+    }
+
+    // Slice by scrollOffset
+    int maxRows = getTerminalRows() - 1;
+    if(maxRows < 5) maxRows = 5;
+
+    int start = cur.scrollOffset;
+    if(start < 0) start = 0;
+    if(start > (int)lines.size()) start = (int)lines.size();
+
+    int end = start + maxRows;
+    if(end > (int)lines.size()) end = (int)lines.size();
+
     std::ostringstream sliced;
-    for(int i = 0; i < headerLines && i < (int)lines.size(); ++i) sliced << lines[i];
-
-    int bodyStart = cur.scrollOffset;
-    int bodyEnd = bodyStart + (maxRows - headerLines);
-    if(bodyEnd > (int)lines.size()) bodyEnd = (int)lines.size();
-
-    for(int i = bodyStart; i < bodyEnd; ++i) sliced << lines[i];
+    for(int i = start; i < end; ++i) sliced << lines[i];
 
     return sliced.str();
 }
@@ -430,15 +486,14 @@ void render(
         if(k == Key::None) continue;
         
         switch(k) {
-            // Quit
             case Key::Quit:
                 running = false;
                 break;
-            // Refresh
+
             case Key::Refresh:
                 monitor.requestRefresh();
                 break;
-            // Up
+
             case Key::Up: {
                 if(cur.mode == Mode::SelectProject) {
                     if(cur.projectIdx > 0) --cur.projectIdx;
@@ -451,10 +506,9 @@ void render(
                         if(cur.col > maxc) cur.col = maxc;
                     }
                 }
-
                 if(cur.scrollOffset > 0) --cur.scrollOffset;
             } break;
-            // Down
+
             case Key::Down: {
                 if(cur.mode == Mode::SelectProject) {
                     if(cur.projectIdx + 1 < (int)views.size()) ++cur.projectIdx;
@@ -467,18 +521,17 @@ void render(
                         if(cur.col > maxc) cur.col = maxc;
                     }
                 }
-
                 int bodyRows = getTerminalRows() - 12;
                 if(bodyRows < 5) bodyRows = 5;
                 if(cur.row >= bodyRows) ++cur.scrollOffset;
             } break;
-            // Left
+
             case Key::Left: {
                 if(cur.mode == Mode::InsideProject) {
                     if(cur.col > 0) --cur.col;
                 }
             } break;
-            // Right
+
             case Key::Right: {
                 if(cur.mode == Mode::InsideProject) {
                     const auto& pv = views[cur.projectIdx];
@@ -487,13 +540,14 @@ void render(
                     if(cur.col < maxc) ++cur.col;
                 }
             } break;
-            // Enter
+
             case Key::Enter: {
                 if(cur.mode == Mode::SelectProject) {
                     if(!views.empty()) {
                         cur.mode = Mode::InsideProject;
                         cur.row = 0;
                         cur.col = 0;
+                        cur.scrollOffset = 0;
                     }
                 } else {
                     const auto& pv = views[cur.projectIdx];
@@ -505,15 +559,16 @@ void render(
                     }
                 }
             } break;
-            // ESC
+
             case Key::Escape: {
                 if(cur.mode == Mode::InsideProject) {
                     cur.mode = Mode::SelectProject;
+                    cur.scrollOffset = 0;
                 } else {
                     running = false;
                 }
             } break;
-            // Space
+
             case Key::Space: {
                 if(cur.mode != Mode::InsideProject) break;
 
