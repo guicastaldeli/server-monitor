@@ -269,6 +269,7 @@ Key readKey() {
         
             if(button == 64)        return Key::ScrollUp;
             if(button == 65)        return Key::ScrollDown;
+            return Key::None;
         }
 
         if(n >= 2 && seq[0] == '[') {
