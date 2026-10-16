@@ -19,7 +19,7 @@ struct Endpoint {
     std::vector<FieldInfo> fields() const { return {
         { "IP", checkHost, [](const std::string& v){ openInBrowser(BROWSER_URL + v); }, false },
         { "URL", displayUrl, [](const std::string& v){ openInBrowser(v); }, true },
-        { "RAW", BROWSER_URL, [](const std::string& v){ openInBrowser(v); }, true }
+        { "RAW", BROWSER_URL + rawUrl, [](const std::string& v){ openInBrowser(v); }, true }
     }; }
 };
 
