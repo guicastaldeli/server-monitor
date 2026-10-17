@@ -35,6 +35,7 @@ struct CursorState {
     int row = 0;
     int col = 0;
     int scrollOffset = 0;
+    int cursorLine = 0;
 };
 
 struct ColWidths {
@@ -83,7 +84,7 @@ void showCursor();
 void moveCursor(int row, int col);
 static std::string build(const std::string& rootFolder,
                         const std::vector<ProjectView>& views,
-                        const CursorState& cur,
+                        CursorState& cur,
                         const StatusMonitor& monitor);
 void render(const std::string& rootFolder,
             const std::vector<Project>& projects,

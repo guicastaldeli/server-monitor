@@ -293,16 +293,18 @@ void moveCursor(int row, int col) {
 static std::string build(
     const std::string& rootFolder,
     const std::vector<ProjectView>& views,
-    const CursorState& cur,
+    CursorState& cur,
     const StatusMonitor& monitor
 ) {
     std::ostringstream out;
+    int lineCount = 0;
 
     int maxRows = getTerminalRows() - 1;
     if(maxRows < 5) maxRows = 5;
 
     auto put = [&](const std::string& s) {
         out << s;
+        lineCount += std::count(s.begin(), s.end(), '\n');
     };
 
     put(hexToAnsiFg("#dfb3f4") + Repeat("=", 60) + ANSI_RESET + "\n");
@@ -329,6 +331,7 @@ static std::string build(
         }
 
         if(cur.mode == Mode::SelectProject && (int)pi == cur.projectIdx) {
+            cur.cursorLine = lineCount;
             put(CURSOR_CHAR + nameColor + pv.name + ANSI_RESET + "\n");
         } else if(cur.mode == Mode::InsideProject && (int)pi == cur.projectIdx) {
             put("** " + nameColor + pv.name + ANSI_RESET + "\n");
@@ -377,6 +380,9 @@ static std::string build(
                 bool rowSelected = (cur.mode == Mode::InsideProject) &&
                                     ((int)pi == cur.projectIdx) &&
                                     ((int)r == cur.row);
+                if(rowSelected) {
+                    cur.cursorLine = lineCount;
+                }
                 std::string rowLine = "     ";
                 for(size_t c = 0; c < row.fields.size(); ++c) {
                     bool cellSel = rowSelected && ((int)c == cur.col);
@@ -512,6 +518,19 @@ void render(
     while(running) {
         refreshRowStatuses(views, projects, monitor);
         std::string frame = build(rootFolder, views, cur, monitor);
+
+        int visibleRows = getTerminalRows() - 1;
+        if(visibleRows < 5) visibleRows = 5;
+
+        if(cur.cursorLine < cur.scrollOffset) {
+            cur.scrollOffset = cur.cursorLine;
+            frame = build(rootFolder, views, cur, monitor);
+        }
+        else if(cur.cursorLine >= cur.scrollOffset + visibleRows) {
+            cur.scrollOffset = cur.cursorLine - visibleRows + 1;
+            frame = build(rootFolder, views, cur, monitor);
+        }
+
         if(frame != lastFrame) {
             std::cout << "\x1b[H\x1b[J" << frame << std::flush;
             lastFrame = frame;
@@ -542,8 +561,6 @@ void render(
                         if(cur.col > maxc) cur.col = maxc;
                     }
                 }
-
-                cur.scrollOffset = cur.projectIdx;
             } break;
             // Down
             case Key::Down: {
@@ -558,8 +575,6 @@ void render(
                         if(cur.col > maxc) cur.col = maxc;
                     }
                 }
-
-                cur.scrollOffset = cur.projectIdx;
             } break;
             // Left
             case Key::Left: {
