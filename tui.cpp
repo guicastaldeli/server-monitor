@@ -527,6 +527,18 @@ void render(
     while(running) {
         refreshRowStatuses(views, projects, monitor);
         std::string frame = build(rootFolder, views, cur, monitor);
+        
+        int visibleRows = getTerminalRows() - 1;
+        if(visibleRows < 5) visibleRows = 5;
+    
+        if(cur.cursorLine < cur.scrollOffset) {
+            cur.scrollOffset = cur.cursorLine;
+            frame = build(rootFolder, views, cur, monitor);
+        } else if(cur.cursorLine >= cur.scrollOffset + visibleRows) {
+            cur.scrollOffset = cur.cursorLine - visibleRows + 1;
+            frame = build(rootFolder, views, cur, monitor);
+        }
+
         if(frame != lastFrame) {
             std::cout << "\x1b[H\x1b[J" << frame << std::flush;
             lastFrame = frame;
