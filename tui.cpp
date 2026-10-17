@@ -488,10 +488,14 @@ static std::string build(
                 break;
             }
     }
-    if(cursorLine < cur.scrollOffset) {
-        cur.scrollOffset = cursorLine;
-    } else if(cursorLine >= cur.scrollOffset + maxRows) {
-        cur.scrollOffset = cursorLine - maxRows + 1;
+    if(cur.cursorMoved) {
+        if(cursorLine < cur.scrollOffset) {
+            cur.scrollOffset = cursorLine;
+        } else if(cursorLine >= cur.scrollOffset + maxRows) {
+            cur.scrollOffset = cursorLine - maxRows + 1;
+        }
+
+        cur.cursorMoved = false;
     }
 
     if(cur.scrollOffset < 0) cur.scrollOffset = 0;
@@ -561,6 +565,7 @@ void render(
                 }
 
                 cur.scrollOffset = cur.projectIdx;
+                cur.cursorMoved = true;
             } break;
             // Down
             case Key::Down: {
@@ -577,6 +582,7 @@ void render(
                 }
 
                 cur.scrollOffset = cur.projectIdx;
+                cur.cursorMoved = true;
             } break;
             // Left
             case Key::Left: {
@@ -651,11 +657,13 @@ void render(
             case Key::ScrollUp: {
                 int limit = 0;
                 if(cur.scrollOffset > limit) --cur.scrollOffset;
+                cur.cursorMoved = false;
             } break;
             // Scroll Down
             case Key::ScrollDown: {
                 int limit = 100;
                 if(cur.scrollOffset < limit) ++cur.scrollOffset;
+                cur.cursorMoved = false;
             } break;
 
             default:

@@ -36,6 +36,7 @@ struct CursorState {
     int col = 0;
     int scrollOffset = 0;
     int cursorLine = 0;
+    bool cursorMoved = false;
 };
 
 struct ColWidths {
