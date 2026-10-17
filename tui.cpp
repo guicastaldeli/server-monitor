@@ -298,9 +298,6 @@ static std::string build(
 ) {
     std::ostringstream out;
 
-    int maxRows = getTerminalRows() - 1;
-    if(maxRows < 5) maxRows = 5;
-
     auto put = [&](const std::string& s) {
         out << s;
     };
@@ -480,6 +477,9 @@ static std::string build(
 
     lines = wrapped;
 
+    int maxRows = getTerminalRows() - 1;
+    if(maxRows < 5) maxRows = 5;
+
     for(int i = 0; i < (int)lines.size(); i++) {
         if(lines[i].find(CURSOR_CHAR) != std::string::npos ||
             lines[i].find("** ") != std::string::npos) {
@@ -527,7 +527,7 @@ void render(
     while(running) {
         refreshRowStatuses(views, projects, monitor);
         std::string frame = build(rootFolder, views, cur, monitor);
-        
+
         int visibleRows = getTerminalRows() - 1;
         if(visibleRows < 5) visibleRows = 5;
     
