@@ -480,20 +480,22 @@ static std::string build(
     int maxRows = getTerminalRows() - 1;
     if(maxRows < 5) maxRows = 5;
 
+    int cursorLine = 0;
     for(int i = 0; i < (int)lines.size(); i++) {
         if(lines[i].find(CURSOR_CHAR) != std::string::npos ||
-            lines[i].find("** ") != std::string::npos) {
-                if(cur.mode == Mode::InsideProject) {
-                    if(lines[i].find("> ") != std::string::npos) {
-                        cur.cursorLine = i;
-                        break;
-                    }
-                } else {
-                    cur.cursorLine = i;
-                    break;
-                }
+            (cur.mode == Mode::InsideProject && lines[i].find("** ") != std::string::npos)) {
+                cursorLine = i;
+                break;
             }
-        }
+    }
+    if(cursorLine < cur.scrollOffset) {
+        cur.scrollOffset = cursorLine;
+    } else if(cursorLine >= cur.scrollOffset + maxRows) {
+        cur.scrollOffset = cursorLine - maxRows + 1;
+    }
+
+    if(cur.scrollOffset < 0) cur.scrollOffset = 0;
+    if(cur.scrollOffset > (int)lines.size()) cur.scrollOffset = (int)lines.size();
 
     int start = cur.scrollOffset;
     if(start < 0) start = 0;
@@ -527,18 +529,6 @@ void render(
     while(running) {
         refreshRowStatuses(views, projects, monitor);
         std::string frame = build(rootFolder, views, cur, monitor);
-
-        int visibleRows = getTerminalRows() - 1;
-        if(visibleRows < 5) visibleRows = 5;
-    
-        if(cur.cursorLine < cur.scrollOffset) {
-            cur.scrollOffset = cur.cursorLine;
-            frame = build(rootFolder, views, cur, monitor);
-        } else if(cur.cursorLine >= cur.scrollOffset + visibleRows) {
-            cur.scrollOffset = cur.cursorLine - visibleRows + 1;
-            frame = build(rootFolder, views, cur, monitor);
-        }
-
         if(frame != lastFrame) {
             std::cout << "\x1b[H\x1b[J" << frame << std::flush;
             lastFrame = frame;
